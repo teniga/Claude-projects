@@ -7,10 +7,12 @@ Android-app die bestanden in een zelfgekozen map (bijv. `Pictures/Screenshots`) 
 - Elke dag automatisch opruimen (aan/uit), blijft actief na herstart
 - "Voorbeeld" toont wat er weg zou gaan zonder iets te verwijderen
 - Melding na elke opruimbeurt
-- Alleen bestanden direct in de map; submappen worden overgeslagen
+- Leeftijd = oudste van de bestandsdatum en de datum in de bestandsnaam (bijv. `Screenshot_20261001-…`), zodat screenshots met een gereset datum (na back-up/kopiëren) toch worden opgeruimd
+- Alleen bestanden direct in de map; submappen en verborgen bestanden worden overgeslagen
 
 ## Installeren
 Download `ScreenshotOpruimer.apk` op je telefoon, open het en sta "Installeren uit onbekende bronnen" toe. Werkt op Android 8.0 en nieuwer.
 
 ## Bouwen
 `./build.sh` — zie de kop van het script voor de benodigde pakketten.
+`./test.sh` — draait de unittests voor de leeftijdsregels.

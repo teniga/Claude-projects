@@ -17,6 +17,7 @@ import android.provider.DocumentsContract;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TimeZone;
 
 /** Shared logic: settings, finding old files, deleting them, scheduling and notifications. */
 final class Cleaner {
@@ -28,11 +29,14 @@ final class Cleaner {
     static final String KEY_LAST_RUN = "last_run";
     static final String KEY_LAST_COUNT = "last_count";
     static final String KEY_LAST_ERROR = "last_error";
+    static final String KEY_LAST_FOUND = "last_found";
+    static final String KEY_LAST_OLD = "last_old";
+    static final String KEY_LAST_FAILED = "last_failed";
     static final int DEFAULT_DAYS = 30;
 
     private static final int JOB_ID = 1001;
     private static final String CHANNEL_ID = "opruimen";
-    private static final long DAY_MS = 24L * 60 * 60 * 1000;
+    private static final long DAY_MS = AgeRules.DAY_MS;
 
     static final class OldFile {
         final String docId;
@@ -46,9 +50,18 @@ final class Cleaner {
         }
     }
 
+    /** Outcome of reading the folder. */
+    static final class Scan {
+        int totalFiles;
+        final List<OldFile> old = new ArrayList<>();
+    }
+
     static final class Result {
+        int totalFiles;
+        int old;
         int deleted;
         int failed;
+        String firstFailure;
         String error;
     }
 
@@ -67,11 +80,13 @@ final class Cleaner {
         return prefs(c).getInt(KEY_DAYS, DEFAULT_DAYS);
     }
 
-    /** Files directly in the chosen folder whose last-modified date is older than the cutoff. */
-    static List<OldFile> findOldFiles(Context c) throws Exception {
+    /** Reads the files directly in the chosen folder and picks the ones older than the set number of days. */
+    static Scan scan(Context c) throws Exception {
         Uri tree = treeUri(c);
         if (tree == null) throw new Exception("Geen map gekozen");
-        long cutoff = System.currentTimeMillis() - days(c) * DAY_MS;
+        int days = days(c);
+        long now = System.currentTimeMillis();
+        TimeZone tz = TimeZone.getDefault();
 
         Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(
                 tree, DocumentsContract.getTreeDocumentId(tree));
@@ -81,7 +96,7 @@ final class Cleaner {
                 DocumentsContract.Document.COLUMN_LAST_MODIFIED,
                 DocumentsContract.Document.COLUMN_MIME_TYPE
         };
-        List<OldFile> out = new ArrayList<>();
+        Scan out = new Scan();
         Cursor cur;
         try {
             cur = c.getContentResolver().query(children, cols, null, null, null);
@@ -90,13 +105,20 @@ final class Cleaner {
         }
         if (cur == null) throw new Exception("Map kon niet worden gelezen");
         try {
+            int iId = cur.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID);
+            int iName = cur.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME);
+            int iMod = cur.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED);
+            int iMime = cur.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE);
             while (cur.moveToNext()) {
-                String mime = cur.getString(3);
+                String mime = iMime < 0 ? null : cur.getString(iMime);
                 if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mime)) continue;
-                if (cur.isNull(2)) continue;
-                long modified = cur.getLong(2);
-                if (modified <= 0 || modified >= cutoff) continue;
-                out.add(new OldFile(cur.getString(0), cur.getString(1), modified));
+                String name = iName < 0 ? null : cur.getString(iName);
+                if (name != null && name.startsWith(".")) continue; // hidden files such as .nomedia
+                out.totalFiles++;
+                long modified = (iMod < 0 || cur.isNull(iMod)) ? -1 : cur.getLong(iMod);
+                if (!AgeRules.isOld(name, modified, days, now, tz)) continue;
+                long when = AgeRules.fileTime(name, modified, now, tz);
+                out.old.add(new OldFile(cur.getString(iId), name, when));
             }
         } finally {
             cur.close();
@@ -110,13 +132,21 @@ final class Cleaner {
         try {
             Uri tree = treeUri(c);
             ContentResolver cr = c.getContentResolver();
-            for (OldFile f : findOldFiles(c)) {
+            Scan scan = scan(c);
+            r.totalFiles = scan.totalFiles;
+            r.old = scan.old.size();
+            for (OldFile f : scan.old) {
                 try {
                     Uri doc = DocumentsContract.buildDocumentUriUsingTree(tree, f.docId);
-                    if (DocumentsContract.deleteDocument(cr, doc)) r.deleted++;
-                    else r.failed++;
+                    if (DocumentsContract.deleteDocument(cr, doc)) {
+                        r.deleted++;
+                    } else {
+                        r.failed++;
+                        if (r.firstFailure == null) r.firstFailure = f.name + ": verwijderen geweigerd";
+                    }
                 } catch (Exception e) {
                     r.failed++;
+                    if (r.firstFailure == null) r.firstFailure = f.name + ": " + e;
                 }
             }
         } catch (Exception e) {
@@ -125,7 +155,10 @@ final class Cleaner {
         prefs(c).edit()
                 .putLong(KEY_LAST_RUN, System.currentTimeMillis())
                 .putInt(KEY_LAST_COUNT, r.deleted)
-                .putString(KEY_LAST_ERROR, r.error)
+                .putString(KEY_LAST_ERROR, r.error != null ? r.error : r.firstFailure)
+                .putInt(KEY_LAST_FOUND, r.totalFiles)
+                .putInt(KEY_LAST_OLD, r.old)
+                .putInt(KEY_LAST_FAILED, r.failed)
                 .apply();
         notifyResult(c, r);
         return r;
@@ -133,8 +166,9 @@ final class Cleaner {
 
     static String describe(Result r) {
         if (r.error != null) return "Opruimen mislukt: " + r.error;
-        String s = r.deleted == 1 ? "1 bestand verwijderd" : r.deleted + " bestanden verwijderd";
-        if (r.failed > 0) s += " (" + r.failed + " mislukt)";
+        String s = (r.deleted == 1 ? "1 bestand verwijderd" : r.deleted + " bestanden verwijderd");
+        if (r.failed > 0) s += ", " + r.failed + " mislukt";
+        s += " (" + r.totalFiles + " in map, " + r.old + " oud genoeg)";
         return s;
     }
 
@@ -149,6 +183,8 @@ final class Cleaner {
                 .setSmallIcon(android.R.drawable.ic_menu_delete)
                 .setContentTitle("Screenshot Opruimer")
                 .setContentText(describe(r))
+                .setStyle(new Notification.BigTextStyle().bigText(
+                        r.firstFailure == null ? describe(r) : describe(r) + "\n" + r.firstFailure))
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .build();

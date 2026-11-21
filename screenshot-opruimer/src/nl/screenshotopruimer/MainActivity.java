@@ -9,6 +9,8 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.provider.DocumentsContract;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -45,6 +47,15 @@ public class MainActivity extends Activity {
 
         daysInput.setText(String.valueOf(Cleaner.days(this)));
         autoSwitch.setChecked(Cleaner.prefs(this).getBoolean(Cleaner.KEY_ENABLED, false));
+
+        daysInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence t, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence t, int a, int b, int c) {}
+            @Override public void afterTextChanged(Editable e) {
+                int d = parseDays();
+                if (d > 0) Cleaner.prefs(MainActivity.this).edit().putInt(Cleaner.KEY_DAYS, d).apply();
+            }
+        });
 
         findViewById(R.id.pick_folder).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { pickFolder(); }
@@ -133,14 +144,19 @@ public class MainActivity extends Activity {
         refresh();
     }
 
-    private void saveDays() {
-        int days;
+    /** Days from the input field, or -1 if it is not a number between 1 and 3650. */
+    private int parseDays() {
         try {
-            days = Integer.parseInt(daysInput.getText().toString().trim());
+            int d = Integer.parseInt(daysInput.getText().toString().trim());
+            return (d >= 1 && d <= 3650) ? d : -1;
         } catch (NumberFormatException e) {
-            days = -1;
+            return -1;
         }
-        if (days < 1 || days > 3650) {
+    }
+
+    private void saveDays() {
+        int days = parseDays();
+        if (days < 0) {
             toast("Vul een aantal dagen in tussen 1 en 3650");
             return;
         }
@@ -160,10 +176,14 @@ public class MainActivity extends Activity {
                 String msg;
                 String title;
                 try {
-                    List<Cleaner.OldFile> files = Cleaner.findOldFiles(MainActivity.this);
-                    title = files.size() == 1 ? "1 bestand ouder dan " + Cleaner.days(MainActivity.this) + " dagen"
-                            : files.size() + " bestanden ouder dan " + Cleaner.days(MainActivity.this) + " dagen";
+                    Cleaner.Scan scan = Cleaner.scan(MainActivity.this);
+                    List<Cleaner.OldFile> files = scan.old;
+                    int days = Cleaner.days(MainActivity.this);
+                    title = files.size() == 1 ? "1 bestand ouder dan " + days + " dagen"
+                            : files.size() + " bestanden ouder dan " + days + " dagen";
                     StringBuilder sb = new StringBuilder();
+                    sb.append(scan.totalFiles).append(" bestanden in de map, ")
+                            .append(files.size()).append(" worden verwijderd.\n\n");
                     DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
                     int shown = 0;
                     for (Cleaner.OldFile f : files) {
@@ -173,7 +193,8 @@ public class MainActivity extends Activity {
                         }
                         sb.append(df.format(new Date(f.modified))).append("  ").append(f.name).append('\n');
                     }
-                    msg = files.isEmpty() ? "Er is niets om op te ruimen." : sb.toString();
+                    if (files.isEmpty()) sb.append("Er is niets om op te ruimen.");
+                    msg = sb.toString();
                 } catch (Exception e) {
                     title = "Voorbeeld";
                     msg = e.getMessage();
@@ -231,14 +252,19 @@ public class MainActivity extends Activity {
         SharedPreferences p = Cleaner.prefs(this);
         StringBuilder sb = new StringBuilder();
         boolean on = p.getBoolean(Cleaner.KEY_ENABLED, false) && tree != null;
+        sb.append("Bestanden ouder dan ").append(Cleaner.days(this)).append(" dagen worden verwijderd.\n");
         sb.append(on ? "Automatisch opruimen staat AAN (1× per dag)." : "Automatisch opruimen staat UIT.");
         long last = p.getLong(Cleaner.KEY_LAST_RUN, 0);
         if (last > 0) {
             sb.append("\nLaatst opgeruimd: ")
                     .append(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(new Date(last)));
+            sb.append("\n").append(p.getInt(Cleaner.KEY_LAST_FOUND, 0)).append(" in map, ")
+                    .append(p.getInt(Cleaner.KEY_LAST_OLD, 0)).append(" oud genoeg, ")
+                    .append(p.getInt(Cleaner.KEY_LAST_COUNT, 0)).append(" verwijderd");
+            int failed = p.getInt(Cleaner.KEY_LAST_FAILED, 0);
+            if (failed > 0) sb.append(", ").append(failed).append(" mislukt");
             String err = p.getString(Cleaner.KEY_LAST_ERROR, null);
             if (err != null) sb.append("\nFout: ").append(err);
-            else sb.append(" — ").append(p.getInt(Cleaner.KEY_LAST_COUNT, 0)).append(" verwijderd");
         }
         statusText.setText(sb.toString());
     }
