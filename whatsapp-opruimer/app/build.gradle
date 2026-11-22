@@ -50,6 +50,8 @@ android {
 }
 
 dependencies {
+    // Lijnt de Kotlin-bibliotheken van ML Kit en MediaPipe op één versie uit.
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.exifinterface:exifinterface:1.4.2'
     implementation 'com.google.mlkit:face-detection:16.1.7'
