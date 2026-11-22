@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nl.whatsappopruimer.SquareFrame xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="2dp">
+
+    <ImageView
+        android:id="@+id/image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#DDDDDD"
+        android:scaleType="centerCrop" />
+
+    <View
+        android:id="@+id/frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/selected_frame" />
+
+    <TextView
+        android:id="@+id/mark"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:background="@drawable/mark_bg"
+        android:gravity="center"
+        android:text="🗑"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp" />
+</nl.whatsappopruimer.SquareFrame>

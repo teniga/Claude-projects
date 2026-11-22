@@ -1,0 +1,32 @@
+name: WhatsApp Opruimer APK
+
+on:
+  push:
+    paths:
+      - 'whatsapp-opruimer/**'
+      - '.github/workflows/whatsapp-opruimer.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: whatsapp-opruimer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests
+        run: ./gradlew --no-daemon testReleaseUnitTest
+      - name: Build APK
+        run: ./gradlew --no-daemon assembleRelease
+      - name: Rename APK
+        run: cp app/build/outputs/apk/release/app-release.apk WhatsAppOpruimer.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WhatsAppOpruimer
+          path: whatsapp-opruimer/WhatsAppOpruimer.apk
