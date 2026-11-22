@@ -10,26 +10,31 @@ public final class Rules {
 
     private Rules() {}
 
-    /** Uitkomst van de persoonsherkenning. */
-    public enum Verdict { NO_PERSON, DOUBT, PERSON }
+    /** Uitkomst van de herkenning: bewaren (KEEP) als er een duidelijk gezicht of een hond op staat. */
+    public enum Verdict { DELETE, DOUBT, KEEP }
 
     /** Gevoeligheid: index 0 = voorzichtig (standaard), 1 = normaal, 2 = streng. */
     public static final String[] LEVEL_NAMES = {
             "Voorzichtig (aanbevolen)", "Normaal", "Streng"
     };
-    /** Vanaf deze persoonsscore telt een foto als "met persoon". */
+    /** Vanaf deze hondscore telt een foto als "met hond". */
     static final float[] KEEP_FROM = {0.35f, 0.50f, 0.60f};
-    /** Vanaf deze persoonsscore (en onder KEEP_FROM) is het twijfel. */
+    /** Vanaf deze hondscore (en onder KEEP_FROM) is het twijfel. */
     static final float[] DOUBT_FROM = {0.15f, 0.25f, 0.40f};
 
     /** Verhouding lang:kort vanaf waar een afbeelding als telefoon-screenshot telt (19,5:9 ≈ 2,17; 16:9-foto's = 1,78). */
     static final float SCREENSHOT_RATIO = 1.95f;
 
-    public static Verdict verdict(int faces, float personScore, int level) {
+    /**
+     * @param faces    aantal duidelijk zichtbare gezichten
+     * @param dogScore hoogste hondscore van de objectdetectie (0–1)
+     * Een persoon zonder zichtbaar gezicht (op de rug, ver weg, alleen handen) telt bewust niet.
+     */
+    public static Verdict verdict(int faces, float dogScore, int level) {
         int l = Math.max(0, Math.min(level, KEEP_FROM.length - 1));
-        if (faces > 0 || personScore >= KEEP_FROM[l]) return Verdict.PERSON;
-        if (personScore >= DOUBT_FROM[l]) return Verdict.DOUBT;
-        return Verdict.NO_PERSON;
+        if (faces > 0 || dogScore >= KEEP_FROM[l]) return Verdict.KEEP;
+        if (dogScore >= DOUBT_FROM[l]) return Verdict.DOUBT;
+        return Verdict.DELETE;
     }
 
     public static boolean isScreenshot(String name, int width, int height) {
@@ -42,7 +47,7 @@ public final class Rules {
     /** Moet de afbeelding standaard aangevinkt staan om naar de prullenbak te gaan? */
     public static boolean selectedByDefault(Verdict v, boolean screenshot, boolean screenshotsAlwaysDelete) {
         if (screenshot && screenshotsAlwaysDelete) return true;
-        return v == Verdict.NO_PERSON;
+        return v == Verdict.DELETE;
     }
 
     private static final Pattern NAME_DATE = Pattern.compile("(?<!\\d)(20\\d{2})(\\d{2})(\\d{2})(?!\\d)");
