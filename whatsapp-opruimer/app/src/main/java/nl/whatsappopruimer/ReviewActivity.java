@@ -31,7 +31,7 @@ public class ReviewActivity extends Activity {
     private static final int REQ_TRASH = 10;
 
     static final int TAB_NO_PERSON = 0, TAB_DOUBT = 1, TAB_SCREENSHOT = 2, TAB_PERSON = 3;
-    private static final String[] TAB_NAMES = {"Geen persoon", "Twijfel", "Screenshots", "Met persoon"};
+    private static final String[] TAB_NAMES = {"Weg", "Twijfel", "Screenshots", "Blijft"};
 
     static final class Entry {
         ResultDb.Row row;
@@ -131,10 +131,10 @@ public class ReviewActivity extends Activity {
                     e.tab = TAB_PERSON;
                     e.selected = false;
                 } else {
-                    Rules.Verdict v = Rules.verdict(r.faces, r.person, level);
+                    Rules.Verdict v = Rules.verdict(r.faces, r.dog, level);
                     boolean shot = Rules.isScreenshot(r.name, r.width, r.height);
                     e.tab = shot ? TAB_SCREENSHOT
-                            : v == Rules.Verdict.NO_PERSON ? TAB_NO_PERSON
+                            : v == Rules.Verdict.DELETE ? TAB_NO_PERSON
                             : v == Rules.Verdict.DOUBT ? TAB_DOUBT : TAB_PERSON;
                     e.selected = Rules.selectedByDefault(v, shot, shotsAlways);
                 }
@@ -167,12 +167,12 @@ public class ReviewActivity extends Activity {
         }
         String h;
         switch (tab) {
-            case TAB_NO_PERSON: h = "Hierop is geen persoon gevonden. Aangevinkte afbeeldingen (rood) gaan naar de prullenbak."; break;
-            case TAB_DOUBT: h = "Hier twijfelt de herkenning. Ze blijven staan, tenzij je ze aanvinkt."; break;
+            case TAB_NO_PERSON: h = "Geen duidelijk gezicht en geen hond gevonden. Aangevinkte afbeeldingen (rood) gaan naar de prullenbak."; break;
+            case TAB_DOUBT: h = "Misschien een hond: hier twijfelt de herkenning. Ze blijven staan, tenzij je ze aanvinkt."; break;
             case TAB_SCREENSHOT: h = Prefs.shotsAlways(this)
-                    ? "Screenshots (herkend aan schermformaat). Ze gaan allemaal weg, ook met persoon."
-                    : "Screenshots (herkend aan schermformaat). Alleen die zonder persoon zijn aangevinkt."; break;
-            default: h = "Hierop is een persoon gevonden (of de afbeelding was onleesbaar). Ze blijven staan.";
+                    ? "Screenshots (herkend aan schermformaat). Ze gaan allemaal weg, ook met gezicht of hond."
+                    : "Screenshots (herkend aan schermformaat). Alleen die zonder gezicht of hond zijn aangevinkt."; break;
+            default: h = "Hierop staat een duidelijk gezicht of een hond (of de afbeelding was onleesbaar). Ze blijven staan.";
         }
         h += "\nTik = aan/uit. Vasthouden = groot bekijken.";
         if (notScanned > 0) h += "\n" + notScanned + " afbeeldingen zijn nog niet gescand en worden niet getoond.";

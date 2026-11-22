@@ -13,7 +13,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Ruimt afbeeldingen zonder personen op. Alles gebeurt op je telefoon; er gaat niets naar internet. Je ziet altijd eerst wat er weg gaat."
+            android:text="Ruimt afbeeldingen op waarop geen duidelijk gezicht en geen hond staat. Alles gebeurt op je telefoon; er gaat niets naar internet. Je ziet altijd eerst wat er weg gaat."
             android:textSize="15sp" />
 
         <TextView
@@ -69,7 +69,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Hoe streng herkennen? Voorzichtig bewaart bij twijfel eerder een foto." />
+            android:text="Hoe streng honden herkennen? Voorzichtig bewaart bij twijfel eerder een foto." />
 
         <RadioGroup
             android:id="@+id/level"
@@ -99,7 +99,7 @@
             android:id="@+id/shotsAlways"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Screenshots altijd weggooien, ook als er een persoon op staat" />
+            android:text="Screenshots altijd weggooien, ook als er een gezicht of hond op staat" />
 
         <TextView
             style="@style/Header"

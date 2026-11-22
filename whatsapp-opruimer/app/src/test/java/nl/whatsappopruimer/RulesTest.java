@@ -10,18 +10,24 @@ import org.junit.Test;
 public class RulesTest {
 
     @Test
-    public void faceAlwaysMeansPerson() {
-        assertEquals(Rules.Verdict.PERSON, Rules.verdict(1, 0f, 2));
+    public void faceAlwaysKeeps() {
+        assertEquals(Rules.Verdict.KEEP, Rules.verdict(1, 0f, 2));
     }
 
     @Test
-    public void scoresPerLevel() {
-        assertEquals(Rules.Verdict.PERSON, Rules.verdict(0, 0.40f, 0));
+    public void dogScoresPerLevel() {
+        assertEquals(Rules.Verdict.KEEP, Rules.verdict(0, 0.40f, 0));
         assertEquals(Rules.Verdict.DOUBT, Rules.verdict(0, 0.40f, 1));
         assertEquals(Rules.Verdict.DOUBT, Rules.verdict(0, 0.40f, 2));
         assertEquals(Rules.Verdict.DOUBT, Rules.verdict(0, 0.20f, 0));
-        assertEquals(Rules.Verdict.NO_PERSON, Rules.verdict(0, 0.20f, 1));
-        assertEquals(Rules.Verdict.NO_PERSON, Rules.verdict(0, 0.05f, 0));
+        assertEquals(Rules.Verdict.DELETE, Rules.verdict(0, 0.20f, 1));
+        assertEquals(Rules.Verdict.DELETE, Rules.verdict(0, 0.05f, 0));
+    }
+
+    @Test
+    public void noFaceNoDogIsDeleted() {
+        // Een lichaam zonder zichtbaar gezicht telt niet: alleen gezicht of hond houdt de foto.
+        assertEquals(Rules.Verdict.DELETE, Rules.verdict(0, 0f, 0));
     }
 
     @Test
@@ -36,12 +42,12 @@ public class RulesTest {
 
     @Test
     public void defaultSelection() {
-        assertTrue(Rules.selectedByDefault(Rules.Verdict.NO_PERSON, false, false));
+        assertTrue(Rules.selectedByDefault(Rules.Verdict.DELETE, false, false));
         assertFalse(Rules.selectedByDefault(Rules.Verdict.DOUBT, false, false));
-        assertFalse(Rules.selectedByDefault(Rules.Verdict.PERSON, false, false));
-        assertFalse(Rules.selectedByDefault(Rules.Verdict.PERSON, true, false));
-        assertTrue(Rules.selectedByDefault(Rules.Verdict.PERSON, true, true));
-        assertTrue(Rules.selectedByDefault(Rules.Verdict.NO_PERSON, true, false));
+        assertFalse(Rules.selectedByDefault(Rules.Verdict.KEEP, false, false));
+        assertFalse(Rules.selectedByDefault(Rules.Verdict.KEEP, true, false));
+        assertTrue(Rules.selectedByDefault(Rules.Verdict.KEEP, true, true));
+        assertTrue(Rules.selectedByDefault(Rules.Verdict.DELETE, true, false));
     }
 
     @Test

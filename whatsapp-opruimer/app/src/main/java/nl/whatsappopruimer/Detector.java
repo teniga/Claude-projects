@@ -15,14 +15,14 @@ import com.google.mlkit.vision.face.Face;
 import com.google.mlkit.vision.face.FaceDetection;
 import com.google.mlkit.vision.face.FaceDetector;
 import com.google.mlkit.vision.face.FaceDetectorOptions;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 /**
- * Herkent personen volledig op het toestel:
- * - ML Kit gezichtsdetectie (ook kleine gezichten, vanaf 5% van de beeldbreedte)
- * - MediaPipe objectdetectie (EfficientDet-Lite2, COCO-klasse "person") voor lichamen,
- *   ook van achteren, van ver weg of half in beeld.
+ * Herkent volledig op het toestel:
+ * - ML Kit gezichtsdetectie (gezichten vanaf 5% van de beeldbreedte)
+ * - MediaPipe objectdetectie (EfficientDet-Lite2, COCO-klassen "dog" en "person").
+ *   De personenscore wordt bewaard ter info; voor de beslissing tellen gezichten en honden.
  * Niet thread-safe: gebruik één Detector per thread.
  */
 final class Detector implements AutoCloseable {
@@ -33,6 +33,7 @@ final class Detector implements AutoCloseable {
         boolean error;
         int faces;
         float personScore;
+        float dogScore;
         int width;
         int height;
     }
@@ -51,8 +52,8 @@ final class Detector implements AutoCloseable {
                 .setBaseOptions(BaseOptions.builder().setModelAssetPath("efficientdet_lite2.tflite").build())
                 .setRunningMode(RunningMode.IMAGE)
                 .setScoreThreshold(0.10f)
-                .setMaxResults(5)
-                .setCategoryAllowlist(Collections.singletonList("person"))
+                .setMaxResults(10)
+                .setCategoryAllowlist(Arrays.asList("person", "dog"))
                 .build();
         objectDetector = ObjectDetector.createFromOptions(context, oo);
     }
@@ -67,13 +68,15 @@ final class Detector implements AutoCloseable {
 
         MPImage mp = new BitmapImageBuilder(img.bitmap).build();
         ObjectDetectorResult od = objectDetector.detect(mp);
-        float best = 0f;
+        float person = 0f, dog = 0f;
         for (Detection d : od.detections()) {
             for (Category c : d.categories()) {
-                if ("person".equals(c.categoryName())) best = Math.max(best, c.score());
+                if ("person".equals(c.categoryName())) person = Math.max(person, c.score());
+                else if ("dog".equals(c.categoryName())) dog = Math.max(dog, c.score());
             }
         }
-        r.personScore = best;
+        r.personScore = person;
+        r.dogScore = dog;
         return r;
     }
 
