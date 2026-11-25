@@ -1367,7 +1367,10 @@
                         },
                         {
                             title: "Stap 3: Delen differentiëren",
-                            body: `Differentieer de binnenfunctie: g′(x) = ${dgHtml}. De e-macht zelf verandert niet: de afgeleide van e<sup class="math-sup">□</sup> is weer e<sup class="math-sup">□</sup>.`,
+                            body: (polyIsConst(p, 1)
+                                ? `De e-macht ${eHtml(g)} blijft staan: de afgeleide van e<sup class="math-sup">□</sup> is weer e<sup class="math-sup">□</sup>.`
+                                : `${c} · ${eHtml(g)} blijft staan: het getal ${c} blijft ervoor en de afgeleide van e<sup class="math-sup">□</sup> is weer e<sup class="math-sup">□</sup>.`) +
+                                ` Differentieer daarna de binnenfunctie: g′(x) = ${dgHtml}.`,
                             rule: "Let op: de exponent blijft hetzelfde, je vermenigvuldigt alleen met g′(x)!"
                         },
                         {
@@ -1383,7 +1386,7 @@
                             : [`Buitenfunctie: e<sup class="math-sup">□</sup> &nbsp;•&nbsp; binnenfunctie: g(x) = ${gHtml}`,
                                `Kettingregel: f′(x) = ${polyIsConst(p, 1) ? "" : c + " · "}${eHtml(g)} · g′(x)`],
                         [`g(x) = ${gHtml} ⇒ <strong style="color: var(--teal-dark);">g′(x) = ${dgHtml}</strong>`,
-                         `(e<sup class="math-sup">□</sup>)′ = e<sup class="math-sup">□</sup> → ${eHtml(g)} blijft staan`],
+                         `${polyIsConst(p, 1) ? "" : c + " · "}${eHtml(g)} blijft staan, je vermenigvuldigt alleen met g′(x)`],
                         [`f′(x) = ${middleHtml}`,
                          `<strong style="color: var(--emerald-dark);">f′(x) = ${simplifiedHtml}</strong>`]
                     ];
@@ -2055,12 +2058,15 @@
                 // STAP 3: Delen differentiëren
                 else if (animStep === 2) {
                     if (p.isChain) {
-                        const box1 = buildChipBox([polyChip(p.dg, "var2")], { badge: "g′(<i>x</i>)", animCls: "anim-flip" });
-                        elStageRow.appendChild(box1);
+                        // Wat blijft staan (getal + e-macht) samen in één kader, daarna × g′(x)
+                        const keepItems = [];
+                        if (!polyIsConst(p.p, 1)) keepItems.push(polyChip(p.p, "num"), { sep: "·" });
+                        keepItems.push(eChip(p.g));
+                        elStageRow.appendChild(buildChipBox(keepItems, { badge: "blijft staan", animCls: "anim-enter" }));
                         scheduleAnim(() => {
                             if (!silent) Sound.ping(2);
                             elStageRow.appendChild(opBadge("·"));
-                            elStageRow.appendChild(buildChipBox([eChip(p.g)], { badge: "e-macht blijft", animCls: "anim-enter" }));
+                            elStageRow.appendChild(buildChipBox([polyChip(p.dg, "var2")], { badge: "g′(<i>x</i>)", animCls: "anim-flip" }));
                         }, 550);
                     } else {
                         elStageRow.appendChild(buildChipBox([polyChip(p.dp, "var1")], { badge: "u′", animCls: "anim-flip" }));
