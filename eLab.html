@@ -1919,7 +1919,9 @@
                 animTimers = [];
             }
 
+            let animEndMs = 0;
             function scheduleAnim(fn, delayMs) {
+                animEndMs = Math.max(animEndMs, delayMs);
                 const id = setTimeout(fn, Math.round(delayMs * speedMult));
                 animTimers.push(id);
                 return id;
@@ -2075,7 +2077,106 @@
                 return Object.assign({ html: eHtml(g), type: "group" }, extra || {});
             }
 
+            /* ---------- Vergrootglas: tussenstappen groot bekijken (pas als de animatie klaar is) ---------- */
+            const elBannerTitle = elDecompBanner.querySelector(".decomp-banner-title");
+            let zoomReady = false;
+            let zoomOverlay = null;
+
+            function setZoomReady(ready) {
+                zoomReady = ready;
+                elBannerTitle.style.cursor = ready ? "zoom-in" : "default";
+                elBannerTitle.title = ready ? "Klik om de tussenstappen te vergroten" : "Wacht tot de animatie klaar is";
+                let hint = elBannerTitle.querySelector(".zoom-hint");
+                if (!hint) {
+                    hint = document.createElement("span");
+                    hint.className = "zoom-hint";
+                    Object.assign(hint.style, { marginLeft: "6px", fontWeight: "700", textTransform: "none", letterSpacing: "0", color: "var(--text-soft)" });
+                    elBannerTitle.appendChild(hint);
+                }
+                hint.textContent = ready ? "· klik om te vergroten" : "";
+            }
+
+            function closeZoom() {
+                if (zoomOverlay) { zoomOverlay.remove(); zoomOverlay = null; }
+            }
+
+            function openZoom() {
+                if (!zoomReady) return;
+                closeZoom();
+                const p = activeAnimProblem;
+                const lines = p.banners[animStep] || [];
+                if (!lines.length) return;
+
+                const overlay = document.createElement("div");
+                overlay.setAttribute("role", "dialog");
+                overlay.setAttribute("aria-modal", "true");
+                overlay.setAttribute("aria-label", "Tussenstappen vergroot");
+                Object.assign(overlay.style, {
+                    position: "fixed", inset: "0", zIndex: "70", background: "rgba(15, 23, 42, 0.55)",
+                    display: "flex", alignItems: "center", justifyContent: "center", padding: "16px"
+                });
+
+                const card = document.createElement("div");
+                card.className = "lab-card";
+                Object.assign(card.style, {
+                    width: "100%", maxWidth: "960px", maxHeight: "90vh", overflowY: "auto",
+                    padding: "22px 26px", position: "relative", animation: "fadeSlideUp 0.25s ease forwards"
+                });
+
+                const close = document.createElement("button");
+                close.type = "button";
+                close.textContent = "✕ Sluiten";
+                close.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors";
+                Object.assign(close.style, { position: "absolute", top: "14px", right: "14px" });
+                close.addEventListener("click", closeZoom);
+
+                const head = document.createElement("div");
+                head.className = "decomp-banner-title";
+                head.style.fontSize = "0.85rem";
+                head.style.paddingRight = "96px";
+                head.textContent = `🔍 Tussenstappen • ${p.explanations[animStep].title}`;
+
+                const opg = document.createElement("div");
+                opg.className = "math-font";
+                Object.assign(opg.style, { fontSize: "1.15rem", color: "var(--text-muted)", margin: "4px 0 14px" });
+                opg.innerHTML = `Opgave: ${p.label}`;
+
+                const body = document.createElement("div");
+                body.className = "math-font";
+                Object.assign(body.style, {
+                    display: "flex", flexDirection: "column", gap: "12px",
+                    fontSize: "clamp(1.15rem, 3.2vw, 1.9rem)", fontWeight: "600", lineHeight: "1.6", color: "var(--text-main)"
+                });
+                lines.forEach(l => {
+                    const row = document.createElement("div");
+                    row.innerHTML = formatMathText(l);
+                    Object.assign(row.style, { padding: "6px 12px", borderLeft: "4px solid var(--indigo-border)", background: "var(--bg-subtle)", borderRadius: "8px" });
+                    body.appendChild(row);
+                });
+
+                const tip = document.createElement("p");
+                Object.assign(tip.style, { marginTop: "16px", fontSize: "0.85rem", color: "var(--text-soft)" });
+                tip.textContent = "Vergelijk deze tussenstappen met je eigen uitwerking. Klik buiten dit venster of druk op Esc om te sluiten.";
+
+                card.append(close, head, opg, body, tip);
+                overlay.appendChild(card);
+                overlay.addEventListener("click", (e) => { if (e.target === overlay) closeZoom(); });
+                document.body.appendChild(overlay);
+                zoomOverlay = overlay;
+                close.focus();
+            }
+
+            elBannerTitle.addEventListener("click", openZoom);
+            document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeZoom(); });
+
             function renderAnimStep(silent) {
+                animEndMs = 0;
+                setZoomReady(false);
+                renderAnimStepInner(silent);
+                scheduleAnim(() => setZoomReady(true), animEndMs + 250);
+            }
+
+            function renderAnimStepInner(silent) {
                 clearAnimTimers();
                 clearSvgLines();
                 arcIds = [];
