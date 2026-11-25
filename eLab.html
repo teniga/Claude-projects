@@ -1966,6 +1966,39 @@
                 path.setAttribute("class", isFaded ? "connector-path faded" : "connector-path");
             }
 
+            // Huidige rij schuift (kleiner en vervaagd) omhoog; de nieuwe rij verschijnt eronder
+            function pushStageRow() {
+                elStage.querySelectorAll(".prev-stage-row, .stage-arrow").forEach(n => n.remove());
+                clearSvgLines();
+                arcIds = [];
+                if (!elStageRow.children.length) return;
+                const prev = document.createElement("div");
+                prev.className = "expr-stage-row prev-stage-row";
+                prev.setAttribute("aria-hidden", "true");
+                Object.assign(prev.style, {
+                    minHeight: "0", padding: "0", opacity: "0.6",
+                    transform: "scale(0.8)", transformOrigin: "center top",
+                    gap: elStageRow.style.gap || "", marginBottom: "-10px"
+                });
+                Array.from(elStageRow.childNodes).forEach(n => prev.appendChild(n));
+                prev.querySelectorAll("*").forEach(n => {
+                    n.classList.remove("anim-enter", "anim-flip", "pair-active-top", "pair-active-bottom");
+                    n.removeAttribute("data-pair-id");
+                });
+                const arrow = document.createElement("div");
+                arrow.className = "stage-arrow";
+                arrow.setAttribute("aria-hidden", "true");
+                arrow.textContent = "↓";
+                Object.assign(arrow.style, {
+                    textAlign: "center", fontWeight: "800", lineHeight: "1",
+                    color: "var(--indigo-main)", position: "relative", zIndex: "10"
+                });
+                elStage.insertBefore(prev, elStageRow);
+                elStage.insertBefore(arrow, elStageRow);
+                elStageRow.innerHTML = "";
+                elStageRow.style.gap = "";
+            }
+
             function drawArcsFaded() {
                 clearSvgLines();
                 arcIds.forEach(id => drawArc(id, true));
@@ -2032,6 +2065,12 @@
                 const html = polyTermCount(t) > 1 ? `(${polyHtml(t)})` : polyHtml(t);
                 return Object.assign({ html, type }, extra || {});
             }
+            // g′ als niet-eerste factor: negatief getal tussen haakjes, bijv. · (−2)
+            function dgChip(c, extra) {
+                const chip = polyChip(c, "var2", extra);
+                if (polyTermCount(c) === 1 && polyLeading(c) < 0) chip.html = `(${chip.html})`;
+                return chip;
+            }
             function eChip(g, extra) {
                 return Object.assign({ html: eHtml(g), type: "group" }, extra || {});
             }
@@ -2067,39 +2106,80 @@
                     elDecompBanner.classList.add("hidden");
                 }
 
+                elStage.querySelectorAll(".prev-stage-row, .stage-arrow").forEach(n => n.remove());
                 elStageRow.innerHTML = "";
                 elStageRow.style.gap = "";
                 const p = activeAnimProblem;
                 const fPrefix = "f(x) =";
 
+                // Eindbeeld van een stap opbouwen in de podiumrij (zonder animatie-vertraging)
+                const vPrimeItems = () => {
+                    const it = [eChip(p.g)];
+                    if (!polyIsConst(p.dg, 1)) it.push({ sep: "·" }, dgChip(p.dg));
+                    return it;
+                };
+                const buildStepFinal = (k, animCls) => {
+                    const a = animCls || "anim-enter";
+                    if (k === 0) {
+                        const items = [];
+                        if (p.isChain) {
+                            if (!polyIsConst(p.p, 1)) items.push(polyChip(p.p, "num"), { sep: "·" });
+                            items.push(eChip(p.g));
+                        } else {
+                            items.push(polyChip(p.p, "var1"), { sep: "·" }, eChip(p.g));
+                        }
+                        elStageRow.appendChild(buildChipBox(items, { prefix: fPrefix, animCls: a }));
+                    } else if (k === 1) {
+                        if (p.isChain) {
+                            if (!polyIsConst(p.p, 1)) {
+                                elStageRow.appendChild(buildChipBox([polyChip(p.p, "num")], { badge: "constante", animCls: a }));
+                                elStageRow.appendChild(opBadge("·"));
+                            }
+                            elStageRow.appendChild(buildChipBox([{ html: `<span class="math-var">e</span><sup class="math-sup">□</sup>`, type: "group" }], { badge: "buitenfunctie", animCls: a }));
+                            elStageRow.appendChild(opBadge("∘", true));
+                            elStageRow.appendChild(buildChipBox([polyChip(p.g, "var2")], { badge: "binnen: g(<i>x</i>)", animCls: animCls || "anim-flip" }));
+                        } else {
+                            elStageRow.appendChild(buildChipBox([polyChip(p.p, "var1")], { badge: "u", animCls: a }));
+                            elStageRow.appendChild(opBadge("·"));
+                            elStageRow.appendChild(buildChipBox([eChip(p.g)], { badge: p.needsChain ? "v (kettingregel!)" : "v", animCls: animCls || "anim-flip" }));
+                        }
+                    } else if (k === 2) {
+                        if (p.isChain) {
+                            const keepItems = [];
+                            if (!polyIsConst(p.p, 1)) keepItems.push(polyChip(p.p, "num"), { sep: "·" });
+                            keepItems.push(eChip(p.g));
+                            elStageRow.appendChild(buildChipBox(keepItems, { badge: "blijft staan", animCls: a }));
+                            elStageRow.appendChild(opBadge("·"));
+                            elStageRow.appendChild(buildChipBox([polyChip(p.dg, "var2")], { badge: "g′(<i>x</i>)", animCls: animCls || "anim-flip" }));
+                        } else {
+                            elStageRow.style.gap = "4px";   // compact, zodat de hele regel op één rij past
+                            elStageRow.appendChild(buildChipBox([polyChip(p.dp, "var1")], { badge: "u′", animCls: a }));
+                            elStageRow.appendChild(createDot("·"));
+                            elStageRow.appendChild(buildChipBox([eChip(p.g)], { badge: "v", animCls: a }));
+                            elStageRow.appendChild(createDot("+"));
+                            elStageRow.appendChild(buildChipBox([polyChip(p.p, "var1")], { badge: "u", animCls: a }));
+                            elStageRow.appendChild(createDot("·"));
+                            elStageRow.appendChild(buildChipBox(vPrimeItems(), { badge: "v′", animCls: a }));
+                            elStageRow.querySelectorAll(".fraction-row").forEach(r => { r.style.flexWrap = "nowrap"; });
+                        }
+                    }
+                };
+
+                // Eindbeeld van de vorige stap blijft (vervaagd) bovenaan zichtbaar
+                if (animStep > 0) {
+                    buildStepFinal(animStep - 1, "none");
+                    pushStageRow();
+                }
+
                 // STAP 1: De functie
                 if (animStep === 0) {
-                    const items = [];
-                    if (p.isChain) {
-                        if (!polyIsConst(p.p, 1)) items.push(polyChip(p.p, "num"), { sep: "·" });
-                        items.push(eChip(p.g));
-                    } else {
-                        items.push(polyChip(p.p, "var1"), { sep: "·" }, eChip(p.g));
-                    }
-                    elStageRow.appendChild(buildChipBox(items, { prefix: fPrefix, animCls: "anim-enter" }));
+                    buildStepFinal(0);
                 }
 
                 // STAP 2: Regel herkennen (u en v, of buiten- en binnenfunctie)
                 else if (animStep === 1) {
                     if (!silent) Sound.ping(1);
-                    if (p.isChain) {
-                        if (!polyIsConst(p.p, 1)) {
-                            elStageRow.appendChild(buildChipBox([polyChip(p.p, "num")], { badge: "constante", animCls: "anim-enter" }));
-                            elStageRow.appendChild(opBadge("·"));
-                        }
-                        elStageRow.appendChild(buildChipBox([{ html: `<span class="math-var">e</span><sup class="math-sup">□</sup>`, type: "group" }], { badge: "buitenfunctie", animCls: "anim-enter" }));
-                        elStageRow.appendChild(opBadge("∘", true));
-                        elStageRow.appendChild(buildChipBox([polyChip(p.g, "var2")], { badge: "binnen: g(<i>x</i>)", animCls: "anim-flip" }));
-                    } else {
-                        elStageRow.appendChild(buildChipBox([polyChip(p.p, "var1")], { badge: "u", animCls: "anim-enter" }));
-                        elStageRow.appendChild(opBadge("·"));
-                        elStageRow.appendChild(buildChipBox([eChip(p.g)], { badge: p.needsChain ? "v (kettingregel!)" : "v", animCls: "anim-flip" }));
-                    }
+                    buildStepFinal(1);
                 }
 
                 // STAP 3: Delen differentiëren
@@ -2116,11 +2196,6 @@
                             elStageRow.appendChild(buildChipBox([polyChip(p.dg, "var2")], { badge: "g′(<i>x</i>)", animCls: "anim-flip" }));
                         }, 550);
                     } else {
-                        const vPrimeItems = () => {
-                            const it = [eChip(p.g)];
-                            if (!polyIsConst(p.dg, 1)) it.push({ sep: "·" }, polyChip(p.dg, "var2"));
-                            return it;
-                        };
                         // Eerst u′ en v′ los ...
                         elStageRow.appendChild(buildChipBox([polyChip(p.dp, "var1")], { badge: "u′", animCls: "anim-flip" }));
                         scheduleAnim(() => {
@@ -2130,17 +2205,9 @@
                         // ... daarna de complete productregel ingevuld: u′ · v + u · v′
                         scheduleAnim(() => {
                             if (!silent) Sound.ping(3);
-                            elStageRow.innerHTML = "";
-                            elStageRow.style.gap = "4px";   // compact, zodat de hele regel op één rij past
-                            elStageRow.appendChild(buildChipBox([polyChip(p.dp, "var1")], { badge: "u′", animCls: "anim-enter" }));
-                            elStageRow.appendChild(createDot("·"));
-                            elStageRow.appendChild(buildChipBox([eChip(p.g)], { badge: "v", animCls: "anim-enter" }));
-                            elStageRow.appendChild(createDot("+"));
-                            elStageRow.appendChild(buildChipBox([polyChip(p.p, "var1")], { badge: "u", animCls: "anim-enter" }));
-                            elStageRow.appendChild(createDot("·"));
-                            elStageRow.appendChild(buildChipBox(vPrimeItems(), { badge: "v′", animCls: "anim-enter" }));
-                            elStageRow.querySelectorAll(".fraction-row").forEach(r => { r.style.flexWrap = "nowrap"; });
-                        }, 1500);
+                            pushStageRow();
+                            buildStepFinal(2);
+                        }, 1700);
                     }
                 }
 
@@ -2151,10 +2218,10 @@
                     if (p.isChain) {
                         items = [];
                         if (!polyIsConst(p.p, 1)) items.push(polyChip(p.p, "num", { pairId: "common" }), { sep: "·" });
-                        items.push(eChip(p.g), { sep: "·" }, polyChip(p.dg, "var2", { pairId: "common" }));
+                        items.push(eChip(p.g), { sep: "·" }, dgChip(p.dg, { pairId: "common" }));
                     } else {
                         items = [polyChip(p.dp, "var1"), { sep: "·" }, eChip(p.g, { pairId: "common" }), { sep: "+" }, polyChip(p.p, "var1"), { sep: "·" }];
-                        if (!polyIsConst(p.dg, 1)) items.push(polyChip(p.dg, "var2"), { sep: "·" });
+                        if (!polyIsConst(p.dg, 1)) items.push(dgChip(p.dg), { sep: "·" });
                         items.push(eChip(p.g, { pairId: "common" }));
                     }
                     elStageRow.appendChild(buildChipBox(items, { prefix, animCls: "anim-enter" }));
@@ -2182,9 +2249,7 @@
                     const showFinal = () => {
                         while (bIdx < bLines.length) revealLine();
                         if (!silent) Sound.success();
-                        clearSvgLines();
-                        arcIds = [];
-                        elStageRow.innerHTML = "";
+                        pushStageRow();
                         if (!p.isChain && polyTermCount(p.q) > 1) {
                             elStageRow.appendChild(buildChipBox([eChip(p.g), { sep: "·" }, polyChip(p.q, "var1")], { prefix, animCls: "anim-enter" }));
                             return;
@@ -2206,13 +2271,11 @@
                         // e-macht buiten haakjes: e^g · (u′ + u · g′)
                         scheduleAnim(() => {
                             if (!silent) Sound.cancel();
-                            clearSvgLines();
-                            arcIds = [];
-                            elStageRow.innerHTML = "";
+                            pushStageRow();
                             const pItem = polyChip(p.p, "var1", { pairId: "uitwerk" });
                             if (polyTermCount(p.p) === 1 && polyLeading(p.p) < 0) pItem.html = `(${pItem.html})`;
                             const inner = [eChip(p.g), { sep: "·" }, { sep: "(" }, { html: polyHtml(p.dp), type: "var1" }, { sep: "+" }, pItem];
-                            if (!polyIsConst(p.dg, 1)) inner.push({ sep: "·" }, polyChip(p.dg, "var2", { pairId: "uitwerk" }));
+                            if (!polyIsConst(p.dg, 1)) inner.push({ sep: "·" }, dgChip(p.dg, { pairId: "uitwerk" }));
                             inner.push({ sep: ")" });
                             elStageRow.appendChild(buildChipBox(inner, { prefix, animCls: "anim-enter" }));
                             revealLine();
@@ -2230,9 +2293,7 @@
                             // b) de uitgewerkte termen binnen de haakjes
                             scheduleAnim(() => {
                                 if (!silent) Sound.step();
-                                clearSvgLines();
-                                arcIds = [];
-                                elStageRow.innerHTML = "";
+                                pushStageRow();
                                 const items = [eChip(p.g), { sep: "·" }, { sep: "(" }];
                                 p.expandedTerms.forEach((term, i) => {
                                     const a = new Array(term.n + 1).fill(0);
