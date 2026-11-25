@@ -1312,7 +1312,27 @@
                 // Wat tussen de haakjes overblijft na buiten haakjes halen (nog niet vereenvoudigd)
                 const innerHtml = isChain ? "" : joinSumHtml(polyHtml(dp), mulHtml(polyIsConst(dg, 1) ? [p] : [p, dg]));
                 const factoredHtml = isChain ? "" : `${eHtml(g)} · (${innerHtml})`;
-                const needsTidy = !isChain && factoredHtml !== simplifiedHtml;
+                // Binnen de haakjes: eerst uitwerken (u · g′ uitvermenigvuldigen), dan gelijksoortige termen samennemen
+                const monoList = (c) => polyTrim(c).map((k, n) => ({ k, n })).filter(t => t.k !== 0).reverse();
+                const prodPoly = isChain ? [0] : polyMul(p, dg);
+                const needsExpand = !isChain && (!polyIsConst(dg, 1) || polyTermCount(p) > 1);
+                const expandedTerms = isChain ? [] : monoList(dp).map(t => Object.assign({ src: "u′" }, t))
+                    .concat(monoList(prodPoly).map(t => Object.assign({ src: "u·g′" }, t)));
+                const monoHtml = (k, n) => { const a = new Array(n + 1).fill(0); a[n] = k; return polyHtml(a); };
+                const termsHtml = (terms) => terms.map((t, i) => i === 0
+                    ? monoHtml(t.k, t.n)
+                    : (t.k < 0 ? " − " : " + ") + monoHtml(Math.abs(t.k), t.n)).join("");
+                const expandedHtml = termsHtml(expandedTerms);
+                const likeGroups = [];
+                expandedTerms.forEach(t => {
+                    if (likeGroups.some(g0 => g0.n === t.n)) return;
+                    const members = expandedTerms.filter(o => o.n === t.n);
+                    if (members.length > 1) {
+                        const sum = members.reduce((acc, o) => acc + o.k, 0);
+                        likeGroups.push({ n: t.n, sum, text: `${termsHtml(members)} = ${sum === 0 ? "0" : monoHtml(sum, t.n)}` });
+                    }
+                });
+                const needsTidy = !isChain && (needsExpand || likeGroups.length > 0 || factoredHtml !== simplifiedHtml);
 
                 // Tussenvorm (letterlijk de regel ingevuld)
                 let middleLatex, middleHtml;
@@ -1427,8 +1447,10 @@
                         },
                         {
                             title: "Stap 4: Samenvoegen",
-                            body: `Beide termen bevatten de factor ${eHtml(g)}. Haal ${eHtml(g)} buiten haakjes: f′(x) = ${factoredHtml}` +
-                                (needsTidy ? `. Vereenvoudig binnen de haakjes: f′(x) = <strong>${simplifiedHtml}</strong>.` : "."),
+                            body: `Beide termen bevatten de factor ${eHtml(g)}. Haal ${eHtml(g)} buiten haakjes: f′(x) = ${factoredHtml}.` +
+                                (needsExpand ? ` Werk binnen de haakjes de vermenigvuldiging uit: ${expandedHtml}.` : "") +
+                                (likeGroups.length ? ` Neem gelijksoortige termen samen: ${likeGroups.map(g0 => g0.text).join(" en ")}.` : "") +
+                                (needsTidy ? ` Dus f′(x) = <strong>${simplifiedHtml}</strong>.` : ""),
                             rule: "Breng de e-macht buiten haakjes en tel gelijksoortige termen binnen de haakjes op."
                         }
                     ];
@@ -1442,7 +1464,9 @@
                             : `v = ${eHtml(g)} ⇒ <strong style="color: var(--amber-dark);">v′ = ${eHtml(g)}</strong>`,
                          `<strong>f′(x) = u′ · v + u · v′ = ${middleHtml}</strong>`],
                         [`f′(x) = ${middleHtml}`,
-                         `f′(x) = ${factoredHtml} (${eHtml(g)} buiten haakjes)`]
+                         `= ${factoredHtml} &nbsp;<span style="color: var(--text-soft);">(${eHtml(g)} buiten haakjes)</span>`]
+                            .concat(needsExpand ? [`= ${eHtml(g)} · (${expandedHtml}) &nbsp;<span style="color: var(--text-soft);">(haakjes uitwerken)</span>`] : [])
+                            .concat(likeGroups.length ? [`<span style="color: var(--red-dark);">Gelijksoortige termen: ${likeGroups.map(g0 => g0.text).join(" &nbsp;en&nbsp; ")}</span>`] : [])
                             .concat(needsTidy ? [`<strong style="color: var(--emerald-dark);">f′(x) = ${simplifiedHtml}</strong>`] : [])
                     ];
                 }
@@ -1461,6 +1485,9 @@
                     simplifiedLatex,
                     simplifiedHtml,
                     needsTidy,
+                    needsExpand,
+                    expandedTerms,
+                    likeGroups,
                     wrongs,
                     banners,
                     explanations
@@ -1879,7 +1906,7 @@
             let animTimers = [];
             let autoPlayTimer = null;
             let autoPlayTicker = null;
-            let arcActive = false;
+            let arcIds = [];
 
             const elStageRow = document.getElementById("expr-stage-row");
             const elStage = document.getElementById("fraction-stage");
@@ -1914,14 +1941,14 @@
             }
 
             // Boog onder twee blokjes in dezelfde rij (gemeenschappelijke factor / samen te nemen factoren)
-            function drawArc(isFaded) {
-                const chips = elStage.querySelectorAll("[data-pair-id='common']");
+            function drawArc(id, isFaded) {
+                const chips = elStage.querySelectorAll(`[data-pair-id='${id}']`);
                 if (chips.length < 2) return;
                 const stageRect = elStage.getBoundingClientRect();
-                let path = elSvg.querySelector("path[data-pair='common']");
+                let path = elSvg.querySelector(`path[data-pair='${id}']`);
                 if (!path) {
                     path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    path.setAttribute("data-pair", "common");
+                    path.setAttribute("data-pair", id);
                     elSvg.appendChild(path);
                 }
                 let d = "";
@@ -1939,9 +1966,14 @@
                 path.setAttribute("class", isFaded ? "connector-path faded" : "connector-path");
             }
 
+            function drawArcsFaded() {
+                clearSvgLines();
+                arcIds.forEach(id => drawArc(id, true));
+            }
+
             function redrawAllConnectors() {
                 clearSvgLines();
-                if (arcActive) drawArc(true);
+                arcIds.forEach(id => drawArc(id, true));
             }
 
             function createChip(item, extraCls) {
@@ -2007,7 +2039,7 @@
             function renderAnimStep(silent) {
                 clearAnimTimers();
                 clearSvgLines();
-                arcActive = false;
+                arcIds = [];
 
                 for (let i = 0; i < 4; i++) {
                     const tab = document.getElementById(`step-tab-${i}`);
@@ -2129,19 +2161,29 @@
 
                     const hasMerge = elStage.querySelectorAll("[data-pair-id='common']").length >= 2;
 
+                    // Tussenstappen regel voor regel tonen, gelijk met de animatie
+                    const bLines = Array.from(elDecompLines.children);
+                    bLines.forEach((l, i) => { if (i > 0) l.style.display = "none"; });
+                    let bIdx = 1;
+                    const revealLine = () => {
+                        const l = bLines[bIdx++];
+                        if (l) { l.style.display = ""; l.classList.add("anim-enter"); }
+                    };
+
                     if (hasMerge) {
                         scheduleAnim(() => {
                             if (!silent) Sound.ping(1);
                             elStage.querySelectorAll("[data-pair-id='common']").forEach(c => c.classList.add("pair-active-top"));
-                            arcActive = true;
-                            drawArc(false);
+                            arcIds = ["common"];
+                            drawArc("common", false);
                         }, 450);
                     }
 
                     const showFinal = () => {
+                        while (bIdx < bLines.length) revealLine();
                         if (!silent) Sound.success();
                         clearSvgLines();
-                        arcActive = false;
+                        arcIds = [];
                         elStageRow.innerHTML = "";
                         if (!p.isChain && polyTermCount(p.q) > 1) {
                             elStageRow.appendChild(buildChipBox([eChip(p.g), { sep: "·" }, polyChip(p.q, "var1")], { prefix, animCls: "anim-enter" }));
@@ -2165,17 +2207,83 @@
                         scheduleAnim(() => {
                             if (!silent) Sound.cancel();
                             clearSvgLines();
-                            arcActive = false;
+                            arcIds = [];
                             elStageRow.innerHTML = "";
-                            const pItem = polyChip(p.p, "var1");
+                            const pItem = polyChip(p.p, "var1", { pairId: "uitwerk" });
                             if (polyTermCount(p.p) === 1 && polyLeading(p.p) < 0) pItem.html = `(${pItem.html})`;
                             const inner = [eChip(p.g), { sep: "·" }, { sep: "(" }, { html: polyHtml(p.dp), type: "var1" }, { sep: "+" }, pItem];
-                            if (!polyIsConst(p.dg, 1)) inner.push({ sep: "·" }, polyChip(p.dg, "var2"));
+                            if (!polyIsConst(p.dg, 1)) inner.push({ sep: "·" }, polyChip(p.dg, "var2", { pairId: "uitwerk" }));
                             inner.push({ sep: ")" });
                             elStageRow.appendChild(buildChipBox(inner, { prefix, animCls: "anim-enter" }));
+                            revealLine();
                         }, 1450);
-                        if (p.needsTidy) scheduleAnim(showFinal, 2650);
-                        else scheduleAnim(() => { if (!silent) Sound.success(); }, 1500);
+
+                        let t = 1450;
+                        if (p.needsExpand) {
+                            // a) laat zien wát er binnen de haakjes uitvermenigvuldigd wordt
+                            scheduleAnim(() => {
+                                if (!silent) Sound.ping(2);
+                                const chips = elStage.querySelectorAll("[data-pair-id='uitwerk']");
+                                chips.forEach(c => c.classList.add("pair-active-top"));
+                                if (chips.length >= 2) { arcIds = ["uitwerk"]; drawArc("uitwerk", false); }
+                            }, t + 1000);
+                            // b) de uitgewerkte termen binnen de haakjes
+                            scheduleAnim(() => {
+                                if (!silent) Sound.step();
+                                clearSvgLines();
+                                arcIds = [];
+                                elStageRow.innerHTML = "";
+                                const items = [eChip(p.g), { sep: "·" }, { sep: "(" }];
+                                p.expandedTerms.forEach((term, i) => {
+                                    const a = new Array(term.n + 1).fill(0);
+                                    a[term.n] = i === 0 ? term.k : Math.abs(term.k);
+                                    if (i > 0) items.push({ sep: term.k < 0 ? "−" : "+" });
+                                    const isLike = p.likeGroups.some(g0 => g0.n === term.n);
+                                    items.push({
+                                        html: polyHtml(a),
+                                        type: term.src === "u′" ? "var1" : "var2",
+                                        pairId: isLike ? `like-${term.n}` : undefined
+                                    });
+                                });
+                                items.push({ sep: ")" });
+                                elStageRow.appendChild(buildChipBox(items, { prefix, animCls: "anim-enter" }));
+                                revealLine();
+                            }, t + 2000);
+                            t += 2000;
+                        }
+                        if (p.likeGroups.length > 0) {
+                            // c) gelijksoortige termen aanwijzen ...
+                            scheduleAnim(() => {
+                                if (!silent) Sound.ping(4);
+                                revealLine();
+                                arcIds = p.likeGroups.map(g0 => `like-${g0.n}`);
+                                arcIds.forEach(id => {
+                                    elStage.querySelectorAll(`[data-pair-id='${id}']`).forEach(c => c.classList.add("pair-active-top"));
+                                    drawArc(id, false);
+                                });
+                            }, t + 1000);
+                            // ... en samennemen (label met de optelling, blokjes doorgestreept)
+                            scheduleAnim(() => {
+                                if (!silent) Sound.cancel();
+                                p.likeGroups.forEach(g0 => {
+                                    const chips = elStage.querySelectorAll(`[data-pair-id='like-${g0.n}']`);
+                                    chips.forEach((c, i) => {
+                                        c.classList.remove("pair-active-top");
+                                        if (i === chips.length - 1) {
+                                            const tag = document.createElement("span");
+                                            tag.className = "cancel-tag";
+                                            tag.innerHTML = g0.text;
+                                            c.appendChild(tag);
+                                        }
+                                        c.classList.add("crossed-out");
+                                    });
+                                });
+                                drawArcsFaded();
+                            }, t + 2000);
+                            t += 2000;
+                        }
+                        if (p.needsTidy) scheduleAnim(showFinal, t + 1400);
+                        else scheduleAnim(() => { while (bIdx < bLines.length) revealLine(); if (!silent) Sound.success(); }, 1500);
                     }
                 }
             }
@@ -2208,7 +2316,7 @@
                 const fillEl = document.getElementById("autoplay-fill");
 
                 const scheduleNext = () => {
-                    const extra = animStep === 2 ? 1300 : animStep === 3 ? 1500 : 300;
+                    const extra = animStep === 2 ? 1300 : animStep === 3 ? 5000 : 300;
                     const totalMs = Math.round((2400 + extra) * speedMult);
                     const start = performance.now();
 
