@@ -1,0 +1,2882 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>e-Lab — Differentiëren met e-machten: Kettingregel &amp; Productregel</title>
+
+    <!-- Tailwind CSS voor responsieve layout en strak onderwijsontwerp -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- MathLive Bibliotheek (voor het wiskundige invoerveld, read-only formules en virtueel toetsenbord) -->
+    <script defer src="https://unpkg.com/mathlive" crossorigin="anonymous"></script>
+
+    <style>
+        /* =====================================================================
+           1. DESIGN TOKENS & ACADEMISCH LICHT KLEURENPALET
+           ===================================================================== */
+        :root {
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-subtle: #f1f5f9;
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e1;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-soft: #64748b;
+
+            /* Vakinhoudelijke kleurcodes */
+            --indigo-main: #4f46e5;
+            --indigo-dark: #3730a3;
+            --indigo-bg: #eef2ff;
+            --indigo-border: #a5b4fc;
+
+            --emerald-main: #059669;
+            --emerald-dark: #065f46;
+            --emerald-bg: #ecfdf5;
+            --emerald-border: #6ee7b7;
+
+            --teal-main: #0d9488;
+            --teal-dark: #115e59;
+            --teal-bg: #f0fdfa;
+            --teal-border: #5eead4;
+
+            --amber-main: #d97706;
+            --amber-dark: #92400e;
+            --amber-bg: #fffbeb;
+            --amber-border: #fcd34d;
+
+            --red-main: #dc2626;
+            --red-dark: #991b1b;
+            --red-bg: #fef2f2;
+            --red-border: #fca5a5;
+
+            /* Animatie-snelheid en vloeiende curves */
+            --speed-mult: 1;
+            --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+            --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 1px 4px -1px rgba(15, 23, 42, 0.04);
+            --shadow-chip: 0 2px 6px rgba(15, 23, 42, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-page);
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 24px 24px;
+            color: var(--text-main);
+            line-height: 1.5;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        .math-font {
+            font-family: Georgia, "Times New Roman", Times, serif;
+            letter-spacing: 0.01em;
+        }
+
+        .math-var {
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-style: italic;
+        }
+
+        sup, .math-sup {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 0.66em;
+            line-height: 0;
+            position: relative;
+            vertical-align: baseline;
+            top: -0.5em;
+            margin-left: 1px;
+            font-style: normal;
+            font-weight: 700;
+        }
+
+        /* =====================================================================
+           2. MATHLIVE INVOERVELD & READ-ONLY WEERGAVE
+           ===================================================================== */
+        math-field.formula-editor-field {
+            font-size: 1.25rem;
+            padding: 0.45rem 0.8rem;
+            min-height: 2.85rem;
+            border-radius: 0.7rem;
+            border: 1.5px solid #cbd5e1;
+            background-color: #ffffff;
+            color: var(--text-main);
+            width: 100%;
+            transition: all 0.18s ease-in-out;
+        }
+
+        math-field.formula-editor-field:focus-within {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            background-color: #ffffff;
+        }
+
+        math-field.math-display {
+            border: none;
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            width: auto;
+            min-height: 0;
+            display: inline-block;
+            pointer-events: none;
+            font-size: 1.15rem;
+            color: var(--text-main);
+        }
+
+        /* =====================================================================
+           3. KAARTEN, VOORBEELDEN & 4-STAPPEN ANIMATIEPODIUM
+           ===================================================================== */
+        .lab-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+        }
+
+        .mini-frac {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.1;
+            gap: 1.5px;
+        }
+
+        .mini-frac-num,
+        .mini-frac-den {
+            padding: 0 2px;
+            white-space: nowrap;
+        }
+
+        .mini-frac-bar {
+            width: 100%;
+            min-width: 18px;
+            height: 1.5px;
+            background: currentColor;
+            border-radius: 999px;
+            opacity: 0.85;
+        }
+
+        .ex-btn {
+            padding: 6px 9px;
+            border-radius: var(--radius-sm);
+            border: 1.5px solid var(--border-medium);
+            background: #ffffff;
+            color: var(--text-main);
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.18s ease;
+        }
+
+        .ex-btn:hover {
+            border-color: var(--indigo-main);
+            background: var(--indigo-bg);
+            color: var(--indigo-dark);
+            transform: translateY(-1px);
+        }
+
+        .ex-btn.selected {
+            background: var(--indigo-main);
+            border-color: var(--indigo-main);
+            color: #ffffff;
+            box-shadow: 0 3px 10px rgba(79, 70, 229, 0.25);
+        }
+
+        .stepper-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+
+        .step-tab {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 4px;
+            border-radius: var(--radius-sm);
+            border: 1.5px solid var(--border-light);
+            background: var(--bg-subtle);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .step-tab:hover {
+            border-color: var(--indigo-border);
+            background: #ffffff;
+        }
+
+        .step-tab.active {
+            background: var(--indigo-bg);
+            border-color: var(--indigo-main);
+            color: var(--indigo-dark);
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.14);
+        }
+
+        .step-tab.done {
+            background: var(--emerald-bg);
+            border-color: var(--emerald-border);
+            color: var(--emerald-dark);
+        }
+
+        .step-tab-num {
+            font-size: 0.64rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .step-tab-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        /* Breuk Stage */
+        .fraction-stage {
+            min-height: 235px;
+            padding: 34px 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+            overflow-x: auto;
+            background: #f8fafc;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+        }
+
+        .expr-stage-row {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 120px;
+            padding: 8px 6px;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+        }
+
+        .single-frac-box {
+            position: relative;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 10px;
+            border-radius: 12px;
+            transition: all calc(0.35s * var(--speed-mult)) var(--ease-smooth);
+        }
+
+        .single-frac-box.flipped-box {
+            background: rgba(238, 242, 255, 0.7);
+            border: 1.5px dashed var(--indigo-border);
+        }
+
+        .flip-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1px 7px;
+            border-radius: 999px;
+            background: var(--indigo-main);
+            color: #ffffff;
+            font-size: 0.6rem;
+            font-weight: 800;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+            animation: popBadge calc(0.3s * var(--speed-mult)) var(--ease-spring) forwards;
+        }
+
+        .fraction-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            gap: 4px;
+            padding: 2px 4px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .fraction-bar {
+            height: 3px;
+            min-width: 72px;
+            width: 100%;
+            background: var(--text-main);
+            border-radius: 999px;
+            margin: 8px 0;
+            transition: width calc(0.45s * var(--speed-mult)) var(--ease-smooth),
+                        opacity calc(0.35s * var(--speed-mult)) ease,
+                        margin calc(0.35s * var(--speed-mult)) ease;
+            z-index: 10;
+        }
+
+        .fraction-bar.bar-hidden {
+            opacity: 0;
+            height: 0;
+            min-width: 0;
+            margin: 3px 0;
+        }
+
+        .stage-op-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            background: #ffffff;
+            border: 2px solid var(--border-medium);
+            color: var(--text-main);
+            box-shadow: var(--shadow-chip);
+            flex-shrink: 0;
+        }
+
+        .stage-op-badge.op-div {
+            background: var(--amber-bg);
+            border-color: var(--amber-border);
+            color: var(--amber-dark);
+        }
+
+        .stage-op-badge.op-mul {
+            background: var(--indigo-bg);
+            border-color: var(--indigo-border);
+            color: var(--indigo-dark);
+        }
+
+        /* SVG Verbindingslijnen */
+        .svg-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            overflow: visible;
+        }
+
+        .connector-path {
+            fill: none;
+            stroke: var(--red-main);
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-dasharray: 5 4;
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+        }
+
+        .connector-path.faded {
+            opacity: 0.45;
+        }
+
+        /* Tussenregels onder de breuken */
+        .decomp-banner {
+            width: 100%;
+            max-width: 520px;
+            background: #ffffff;
+            border: 1.5px solid var(--indigo-border);
+            border-radius: var(--radius-md);
+            padding: 8px 12px;
+            margin-top: 14px;
+            font-size: 0.78rem;
+            color: var(--text-main);
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.06);
+            animation: fadeSlideUp calc(0.35s * var(--speed-mult)) var(--ease-smooth) forwards;
+        }
+
+        .decomp-banner-title {
+            font-size: 0.66rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--indigo-main);
+            margin-bottom: 3px;
+        }
+
+        .decomp-banner-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            font-weight: 600;
+        }
+
+        .autoplay-btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .autoplay-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0%;
+            background: rgba(217, 119, 6, 0.18);
+            pointer-events: none;
+        }
+
+        /* =====================================================================
+           4. FACTOR-BLOKJES & DIDACTISCHE ANIMATIES
+           ===================================================================== */
+        .factor-chip {
+            position: relative;
+            z-index: 12;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 34px;
+            min-width: 32px;
+            padding: 0 9px;
+            border-radius: 9px;
+            font-size: 0.98rem;
+            font-weight: 700;
+            line-height: 1;
+            box-shadow: var(--shadow-chip);
+            user-select: none;
+            white-space: nowrap;
+            transition: transform calc(0.3s * var(--speed-mult)) var(--ease-smooth),
+                        opacity calc(0.3s * var(--speed-mult)) ease,
+                        box-shadow calc(0.25s * var(--speed-mult)) ease,
+                        background-color 0.25s ease;
+        }
+
+        .type-num {
+            background: var(--indigo-bg);
+            border: 1.5px solid var(--indigo-border);
+            color: var(--indigo-dark);
+        }
+
+        .type-var1 {
+            background: var(--emerald-bg);
+            border: 1.5px solid var(--emerald-border);
+            color: var(--emerald-dark);
+        }
+
+        .type-var2 {
+            background: var(--teal-bg);
+            border: 1.5px solid var(--teal-border);
+            color: var(--teal-dark);
+        }
+
+        .type-group {
+            background: var(--amber-bg);
+            border: 1.5px solid var(--amber-border);
+            color: var(--amber-dark);
+        }
+
+        .type-one {
+            background: var(--bg-subtle);
+            border: 1.5px solid var(--border-medium);
+            color: var(--text-muted);
+        }
+
+        .dot-sep {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: var(--text-soft);
+            font-size: 0.95rem;
+            padding: 0 1px;
+            user-select: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+
+        .cancel-tag {
+            position: absolute;
+            top: -12px;
+            right: -7px;
+            padding: 1px 5px;
+            border-radius: 999px;
+            background: var(--red-main);
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 0.58rem;
+            font-weight: 800;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity calc(0.3s * var(--speed-mult)) ease, transform calc(0.32s * var(--speed-mult)) var(--ease-spring);
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        .anim-denominator .cancel-tag {
+            top: auto;
+            bottom: -12px;
+        }
+
+        .factor-chip::after {
+            content: "";
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            top: 50%;
+            height: 2.8px;
+            background: var(--red-main);
+            border-radius: 999px;
+            transform: translateY(-50%) rotate(-24deg) scaleX(0);
+            transform-origin: center;
+            transition: transform calc(0.32s * var(--speed-mult)) var(--ease-spring);
+            pointer-events: none;
+            z-index: 22;
+        }
+
+        .factor-chip.crossed-out {
+            opacity: 0.56;
+            background: #f8fafc;
+            border-color: var(--red-border);
+        }
+
+        .factor-chip.crossed-out::after {
+            transform: translateY(-50%) rotate(-24deg) scaleX(1);
+        }
+
+        .factor-chip.crossed-out .cancel-tag {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .pair-active-top {
+            box-shadow: 0 0 0 3px var(--red-main), 0 5px 14px rgba(220, 38, 38, 0.22);
+            transform: translateY(-3px) scale(1.08);
+            z-index: 24;
+        }
+
+        .pair-active-bottom {
+            box-shadow: 0 0 0 3px var(--red-main), 0 5px 14px rgba(220, 38, 38, 0.22);
+            transform: translateY(3px) scale(1.08);
+            z-index: 24;
+        }
+
+        .remains-one-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: var(--emerald-bg);
+            border: 1.5px solid var(--emerald-border);
+            color: var(--emerald-dark);
+            font-size: 0.82rem;
+            font-weight: 800;
+            margin-left: 4px;
+            animation: popBadge calc(0.35s * var(--speed-mult)) var(--ease-spring) forwards;
+        }
+
+        .shrinking-away {
+            transform: scale(0.15) !important;
+            opacity: 0 !important;
+        }
+
+        @keyframes fadeScaleIn {
+            from { opacity: 0; transform: scale(0.84) translateY(5px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes flipRotateIn {
+            from { opacity: 0; transform: rotateX(85deg) scale(0.9); }
+            to { opacity: 1; transform: rotateX(0deg) scale(1); }
+        }
+
+        @keyframes popBadge {
+            from { opacity: 0; transform: translateX(-50%) scale(0.5); }
+            to { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .anim-enter {
+            animation: fadeScaleIn calc(0.32s * var(--speed-mult)) var(--ease-spring) backwards;
+        }
+
+        .anim-flip {
+            animation: flipRotateIn calc(0.45s * var(--speed-mult)) var(--ease-spring) backwards;
+        }
+
+        /* Feedback Toast */
+        .toast-notice {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translate(-50%, 80px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 0.84rem;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+            pointer-events: none;
+            z-index: 60;
+        }
+
+        .toast-notice.show {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="py-3 px-3 sm:px-6 flex flex-col items-center">
+
+    <div class="max-w-6xl w-full space-y-3">
+
+        <!-- ===================================================================
+             BOVENSTE WERK- & MODUSBALK (ALTIJD BESCHIKBAAR)
+             =================================================================== -->
+        <header class="lab-card px-4 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-sm math-font shrink-0" aria-hidden="true">
+                    (<span class="math-var">e</span><sup>x</sup>)′
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-slate-900 text-base tracking-tight">e-Lab</span>
+                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Kettingregel &amp; Productregel
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 hidden sm:block">
+                        Stap-voor-stap regel herkennen, differentiëren en samenvoegen met live animatiehulp
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Moduswisselaar -->
+                <div class="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1" role="tablist" aria-label="Werkmodus">
+                    <button id="mode-practice-btn" type="button" class="px-3 py-1 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-sm transition-all">
+                        Oefenen &amp; Animatie
+                    </button>
+                    <button id="mode-explore-btn" type="button" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all">
+                        Uitleg &amp; Eigen Functie
+                    </button>
+                </div>
+
+                <!-- Animatiesnelheid -->
+                <div class="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-0.5" aria-label="Animatiesnelheid">
+                    <button id="speed-slow" type="button" class="px-2 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all">0.6x</button>
+                    <button id="speed-norm" type="button" class="px-2 py-1 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-sm transition-all">1.0x</button>
+                    <button id="speed-fast" type="button" class="px-2 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all">1.5x</button>
+                </div>
+
+                <!-- Optionele geluidsknop -->
+                <button id="btn-sound" type="button" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors" title="Geluidseffecten aan of uit">
+                    <span id="sound-icon">🔇</span>
+                    <span id="sound-text" class="hidden md:inline">Geluid uit</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ===================================================================
+             SCHERM 1: INSTELLINGEN (AANTAL VRAGEN & NIVEAU/CATEGORIE)
+             =================================================================== -->
+        <section id="setup-screen" class="lab-card p-6 sm:p-8 max-w-4xl mx-auto w-full mt-2">
+            <div class="mb-6">
+                <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 mb-2 tracking-wide uppercase">
+                    Nederlandse Wiskundige Notatie
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                    Differentiëren van e-machten: Kettingregel &amp; Productregel
+                </h1>
+                <p class="text-slate-600 mt-1">
+                    Stel het aantal vragen en het niveau in en werk stap voor stap toe naar de vereenvoudigde afgeleide f′(x). Rechts staat het animatiescherm klaar om je bij elke stap te helpen.
+                </p>
+            </div>
+
+            <div class="space-y-5">
+                <!-- Aantal vragen -->
+                <div>
+                    <label for="question-count-input" class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                        Aantal vragen
+                    </label>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <input
+                            type="number"
+                            id="question-count-input"
+                            min="1"
+                            max="50"
+                            value="5"
+                            class="w-28 px-4 py-2 text-lg font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        >
+                        <div class="flex gap-2">
+                            <button type="button" data-preset="3" class="preset-btn px-3 py-2 text-sm font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">3 vragen</button>
+                            <button type="button" data-preset="5" class="preset-btn px-3 py-2 text-sm font-semibold rounded-lg bg-blue-100 text-blue-800 transition-colors">5 vragen</button>
+                            <button type="button" data-preset="10" class="preset-btn px-3 py-2 text-sm font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">10 vragen</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Niveau / Categorie -->
+                <div>
+                    <label for="difficulty-select" class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                        Niveau / Categorie
+                    </label>
+                    <select
+                        id="difficulty-select"
+                        class="w-full sm:w-[40rem] px-4 py-2.5 text-base bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    >
+                        <option value="mixed" selected>Gemengd (alle niveaus door elkaar)</option>
+                        <option value="Basis">Niveau 1: Basis – e-macht met lineaire exponent (bijv. e^(3x) of 4e^(−x))</option>
+                        <option value="Kettingregel">Niveau 2: Kettingregel – veelterm in de exponent (bijv. e^(x² + 1) of 5e^(2x − 3))</option>
+                        <option value="Productregel">Niveau 3: Productregel – veelterm · eˣ (bijv. x · eˣ of x² · eˣ)</option>
+                        <option value="Product + ketting">Niveau 4: Product + ketting – productregel én kettingregel (bijv. x · e^(2x) of (x + 1) · e^(−x))</option>
+                        <option value="Uitdaging">Niveau 5: Uitdaging – kwadraten in factor en exponent (bijv. x² · e^(x²) of (2x − 1) · e^(3x + 1))</option>
+                    </select>
+                </div>
+
+                <div class="pt-2 flex flex-wrap items-center gap-3">
+                    <button
+                        id="start-btn"
+                        type="button"
+                        class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm transition-colors text-base"
+                    >
+                        Start oefening
+                    </button>
+                    <button
+                        id="setup-open-explore-btn"
+                        type="button"
+                        class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl transition-colors text-sm"
+                    >
+                        Of bekijk voorbeelden / voer eigen functie in →
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+             SCHERM 2: GEDEELD OEFENSCHERM (LINKS: UITWERKINGEN & EDITOR, RECHTS: ANIMATIE)
+             =================================================================== -->
+        <section id="practice-screen" class="hidden space-y-2.5">
+
+            <!-- Bovenbalk -->
+            <div class="lab-card px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <span id="question-counter" class="text-sm font-extrabold uppercase tracking-wide text-blue-600">
+                        Vraag 1 / 5
+                    </span>
+                    <span id="solved-counter" class="text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-md">
+                        0/5 opgelost
+                    </span>
+                    <div id="question-nav-pills" class="flex flex-wrap gap-1" aria-label="Vragenoverzicht"></div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span id="level-badge" class="hidden sm:inline-block text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-md"></span>
+                    <button
+                        id="reset-btn"
+                        type="button"
+                        class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 px-3 rounded-lg font-semibold transition-colors"
+                    >
+                        Instellingen
+                    </button>
+                </div>
+            </div>
+
+            <!-- Gedeeld Werkveld -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
+
+                <!-- LINKERKANT (7 kolommen): Opgave, Tussenstappen & Formule Editor -->
+                <div class="lg:col-span-7 lab-card overflow-hidden">
+
+                    <!-- Regel 1: De opgave -->
+                    <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="w-16 shrink-0 text-xs font-bold text-slate-500 uppercase tracking-wide">Opgave</span>
+                            <math-field id="current-equation-display" read-only class="math-display font-bold text-slate-900"></math-field>
+                        </div>
+                        <span id="question-status-badge" class="hidden shrink-0 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                            ✓ Opgelost
+                        </span>
+                    </div>
+
+                    <!-- Regels 2..N: Goedgekeurde tussenstappen -->
+                    <div id="steps-container" class="divide-y divide-slate-100 max-h-[34vh] overflow-y-auto"></div>
+
+                    <!-- Actieve invoerregel -->
+                    <div class="px-4 py-3 bg-blue-50/40 border-t border-slate-200">
+                        <div class="flex items-center gap-3">
+                            <span id="next-step-label" class="w-16 shrink-0 text-xs font-bold text-blue-700 uppercase tracking-wide">
+                                Stap 1
+                            </span>
+                            <div class="flex-1 min-w-0">
+                                <math-field id="formula-input" class="formula-editor-field" math-virtual-keyboard-policy="manual"></math-field>
+                            </div>
+                        </div>
+
+                        <!-- Snelle wiskundige invoerknoppen -->
+                        <div class="mt-2.5 sm:pl-[4.75rem] flex flex-wrap items-center justify-between gap-1.5">
+                            <div class="flex flex-wrap items-center gap-1" role="toolbar" aria-label="Wiskundige snelknoppen">
+                                <button type="button" data-insert="e^{#?}" title="e-macht invoeren" class="quick-insert px-2 py-1 text-xs font-semibold bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-300 rounded text-slate-800"><span class="math-var">e</span><sup>□</sup></button>
+                                <button type="button" data-insert="\cdot" title="Maalpunt" class="quick-insert px-2 py-1 text-xs font-bold bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-300 rounded text-slate-800">·</button>
+                                <button type="button" data-insert="#@^{2}" title="Kwadraat" class="quick-insert px-2 py-1 text-xs font-serif bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-300 rounded text-slate-800"><span class="math-var">x</span><sup>2</sup></button>
+                                <button type="button" data-insert="f'(x)=" title="Begin met f′(x) =" class="quick-insert px-2 py-1 text-xs font-serif bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-300 rounded text-slate-800"><span class="math-var">f</span>′(<span class="math-var">x</span>) =</button>
+                                <button type="button" data-insert="\left(#?\right)" title="Haakjes" class="quick-insert px-2 py-1 text-xs font-serif bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-300 rounded text-slate-800">( <span class="math-var">x</span> )</button>
+                            </div>
+
+                            <div class="flex items-center gap-1.5">
+                                <button
+                                    id="clear-input-btn"
+                                    type="button"
+                                    class="px-2.5 py-1 text-xs bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-semibold rounded-lg transition-colors"
+                                >
+                                    Wissen
+                                </button>
+                                <button
+                                    id="check-step-btn"
+                                    type="button"
+                                    class="px-3.5 py-1 text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm transition-colors"
+                                >
+                                    Controleer stap ↵
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Feedbackmelding -->
+                        <div id="feedback-box" class="hidden mt-2.5 sm:ml-[4.75rem] px-3 py-2 rounded-lg border text-xs sm:text-sm font-medium"></div>
+                    </div>
+                </div>
+
+                <!-- RECHTERKANT (5 kolommen): Gedeeld Animatiescherm -->
+                <aside id="shared-animation-panel" class="lg:col-span-5 lab-card p-3.5 flex flex-col gap-2.5" aria-label="Animatiescherm voor stap-voor-stap hulp">
+                    <div class="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-100">
+                        <div>
+                            <div class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600">
+                                Animatiescherm • Stap-voor-stap hulp
+                            </div>
+                            <div id="anim-current-label" class="text-xs font-bold text-slate-700">
+                                Gesynchroniseerd met actuele opgave
+                            </div>
+                        </div>
+                        <button id="btn-sync-step" type="button" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors" title="Synchroniseer animatie met je huidige stap">
+                            Volg mijn stap
+                        </button>
+                    </div>
+
+                    <!-- Klikbare 4-stappenbalk -->
+                    <div class="stepper-bar" role="tablist" aria-label="Stappenplan animatie">
+                        <button id="step-tab-0" class="step-tab active" type="button">
+                            <span class="step-tab-num">Stap 1</span>
+                            <span class="step-tab-label">Opgave</span>
+                        </button>
+                        <button id="step-tab-1" class="step-tab" type="button">
+                            <span class="step-tab-num">Stap 2</span>
+                            <span class="step-tab-label">Regel herkennen</span>
+                        </button>
+                        <button id="step-tab-2" class="step-tab" type="button">
+                            <span class="step-tab-num">Stap 3</span>
+                            <span class="step-tab-label">Delen differentiëren</span>
+                        </button>
+                        <button id="step-tab-3" class="step-tab" type="button">
+                            <span class="step-tab-num">Stap 4</span>
+                            <span class="step-tab-label">Samenvoegen</span>
+                        </button>
+                    </div>
+
+                    <!-- Animatie Stage met SVG verbindingslijnen -->
+                    <div id="fraction-stage" class="fraction-stage">
+                        <svg id="connector-svg" class="svg-overlay" aria-hidden="true"></svg>
+                        <div id="expr-stage-row" class="expr-stage-row"></div>
+
+                        <!-- Tussenregels onder de breuken -->
+                        <div id="decomp-banner" class="decomp-banner hidden">
+                            <div class="decomp-banner-title">🔍 Tussenstappen</div>
+                            <div id="decomp-banner-lines" class="decomp-banner-lines"></div>
+                        </div>
+                    </div>
+
+                    <!-- Uitleg & rekenregel -->
+                    <div class="bg-slate-50 border border-slate-200/90 rounded-xl p-2.5 space-y-1.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 id="explain-title" class="text-xs sm:text-sm font-extrabold text-slate-900">
+                                Stap 1: De functie
+                            </h2>
+                            <span id="explain-cat-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                                Basis
+                            </span>
+                        </div>
+                        <p id="explain-body" class="text-xs text-slate-600 leading-relaxed">
+                            Bekijk de functie en herken uit welke delen hij bestaat.
+                        </p>
+                        <div class="pt-1 border-t border-slate-200/80 text-[11px] font-semibold text-indigo-900">
+                            📌 <span id="explain-rule">Kettingregel: (e<sup>g(x)</sup>)′ = e<sup>g(x)</sup> · g′(x). Productregel: (u · v)′ = u′ · v + u · v′.</span>
+                        </div>
+                    </div>
+
+                    <!-- Bedieningsknoppen -->
+                    <div class="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
+                        <button id="btn-prev" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors" type="button">
+                            ← Vorige
+                        </button>
+
+                        <div class="flex items-center gap-1.5">
+                            <button id="btn-replay" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors" type="button">
+                                ↻ Herhaal
+                            </button>
+                            <button id="btn-autoplay" class="autoplay-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors flex items-center gap-1" type="button">
+                                <span id="autoplay-fill" class="autoplay-fill"></span>
+                                <span id="autoplay-icon">▶</span>
+                                <span id="autoplay-text">Speel alles af</span>
+                            </button>
+                        </div>
+
+                        <button id="btn-next" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40 disabled:pointer-events-none transition-colors" type="button">
+                            Volgende →
+                        </button>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Navigatiebalk onderaan -->
+            <div class="flex items-center justify-between">
+                <button
+                    id="prev-btn"
+                    type="button"
+                    class="px-4 py-1.5 text-sm bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-slate-800 font-semibold rounded-lg border border-slate-300 shadow-sm transition-colors"
+                >
+                    ← Vorige vraag
+                </button>
+
+                <button
+                    id="next-btn"
+                    type="button"
+                    class="px-4 py-1.5 text-sm bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg shadow-sm transition-colors"
+                >
+                    Volgende vraag →
+                </button>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+             SCHERM 3: UITLEG & EIGEN SOM INVOEREN (VRIJE VERKENNING)
+             =================================================================== -->
+        <section id="explore-screen" class="hidden space-y-3">
+            <div class="lab-card p-4 sm:p-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
+                    <div>
+                        <div class="text-xs font-extrabold uppercase tracking-wider text-indigo-600">
+                            Voorbeelden per niveau &amp; Eigen Functie
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Kies een voorbeeld uit een niveau of voer een eigen functie in van de vorm (veelterm) · e-macht.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-random-explore" type="button" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors">
+                            🎲 Willekeurige functie
+                        </button>
+                        <button id="btn-back-to-practice" type="button" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                            Terug naar oefenen →
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5 Categorieën met voorbeeldknoppen -->
+                <div id="example-categories" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 mb-4"></div>
+
+                <!-- Formule-editor voor eigen som -->
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-xs font-extrabold uppercase tracking-wide text-slate-700">
+                            Eigen functie invoeren (Formule Editor)
+                        </span>
+                        <span class="text-xs text-slate-500">
+                            Bijv. <code class="font-mono bg-slate-200 px-1.5 py-0.5 rounded">x * e^(2x)</code> of <code class="font-mono bg-slate-200 px-1.5 py-0.5 rounded">(x^2+1) * e^(-x)</code>
+                        </span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-1">
+                        <button type="button" data-explore-insert="e^{#?}" class="explore-quick px-2 py-1 text-xs font-semibold bg-white border border-slate-200 hover:bg-blue-50 rounded text-slate-800"><span class="math-var">e</span><sup>□</sup></button>
+                        <button type="button" data-explore-insert="\cdot" class="explore-quick px-2 py-1 text-xs font-bold bg-white border border-slate-200 hover:bg-blue-50 rounded text-slate-800">·</button>
+                        <button type="button" data-explore-insert="f(x)=" class="explore-quick px-2 py-1 text-xs font-bold bg-white border border-slate-200 hover:bg-blue-50 rounded text-slate-800"><span class="math-var">f</span>(<span class="math-var">x</span>) =</button>
+                        <button type="button" data-explore-insert="#@^{2}" class="explore-quick px-2 py-1 text-xs font-serif bg-white border border-slate-200 hover:bg-blue-50 rounded text-slate-800"><span class="math-var">x</span><sup>2</sup></button>
+                        <button type="button" data-explore-insert="\left(#?\right)" class="explore-quick px-2 py-1 text-xs font-serif bg-white border border-slate-200 hover:bg-blue-50 rounded text-slate-800">( <span class="math-var">x</span> )</button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <math-field id="explore-formula-input" class="formula-editor-field flex-1 min-w-[240px]" math-virtual-keyboard-policy="manual">
+                            x\cdot e^{2x}
+                        </math-field>
+                        <button id="btn-explore-apply" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors">
+                            ▶ Toon in animatie
+                        </button>
+                    </div>
+
+                    <div id="explore-error" class="hidden px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs font-semibold"></div>
+                </div>
+            </div>
+
+            <!-- Gedeelde animatiecontainer -->
+            <div id="explore-animation-slot"></div>
+        </section>
+
+        <!-- ===================================================================
+             SCHERM 4: EINDOVERZICHT
+             =================================================================== -->
+        <section id="summary-screen" class="hidden lab-card p-6 max-w-4xl mx-auto w-full space-y-5 mt-2">
+            <div class="text-center">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-700 text-xl font-bold mb-2">
+                    ✓
+                </div>
+                <h2 class="text-2xl font-extrabold text-slate-900">Overzicht van je oefening</h2>
+                <p id="summary-score-text" class="text-slate-600 mt-1 text-base"></p>
+            </div>
+
+            <div id="summary-list" class="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden"></div>
+
+            <div class="flex flex-wrap justify-between gap-3 pt-1">
+                <button
+                    id="back-to-questions-btn"
+                    type="button"
+                    class="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl transition-colors"
+                >
+                    ← Terugbladeren naar vragen
+                </button>
+                <button
+                    id="restart-new-btn"
+                    type="button"
+                    class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm transition-colors"
+                >
+                    Nieuwe oefening starten
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Feedback Toast -->
+    <div id="toast" role="status" aria-live="polite" class="toast-notice">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        (function () {
+            "use strict";
+
+            /* =================================================================
+               1. GELUIDSSYNTHESIZER (STANDAARD UIT)
+               ================================================================= */
+            const Sound = {
+                ctx: null,
+                enabled: false,
+
+                ensureContext() {
+                    try {
+                        if (!this.ctx) {
+                            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                            if (AudioCtx) this.ctx = new AudioCtx();
+                        }
+                        if (this.ctx && this.ctx.state === "suspended") {
+                            this.ctx.resume();
+                        }
+                    } catch (e) {
+                        this.ctx = null;
+                    }
+                },
+
+                tone(freqStart, freqEnd, duration, type, peakGain) {
+                    if (!this.enabled) return;
+                    try {
+                        this.ensureContext();
+                        if (!this.ctx) return;
+                        const now = this.ctx.currentTime;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = type || "sine";
+                        osc.frequency.setValueAtTime(freqStart, now);
+                        if (freqEnd && freqEnd !== freqStart) {
+                            osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
+                        }
+                        gain.gain.setValueAtTime(0.001, now);
+                        gain.gain.linearRampToValueAtTime(peakGain || 0.04, now + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now);
+                        osc.stop(now + duration + 0.02);
+                    } catch (e) {}
+                },
+
+                step() { this.tone(240, 380, 0.13, "sine", 0.035); },
+                ping(idx) { this.tone(440 * Math.pow(1.12, idx || 0), 440 * Math.pow(1.12, idx || 0), 0.16, "triangle", 0.04); },
+                cancel() { this.tone(720, 320, 0.14, "sine", 0.04); },
+                error() { this.tone(170, 130, 0.16, "triangle", 0.045); },
+                success() {
+                    this.ping(0);
+                    setTimeout(() => this.ping(2), 70);
+                    setTimeout(() => this.ping(4), 140);
+                }
+            };
+
+            /* =================================================================
+               2. WISKUNDIGE HULPFUNCTIES: VEELTERMEN IN x
+                  Een veelterm is een rij coëfficiënten [c0, c1, c2, ...]
+                  (c0 + c1·x + c2·x² + ...)
+               ================================================================= */
+            function formatMathText(str) {
+                const unicodeMap = { "²": "2", "³": "3", "⁴": "4", "⁵": "5" };
+                const normalized = String(str).replace(/[²³⁴⁵]/g, m => "^" + unicodeMap[m]);
+                const tags = [];
+                const withoutTags = normalized.replace(/<[^>]+>/g, tag => {
+                    tags.push(tag);
+                    return `${tags.length - 1}`;
+                });
+
+                const formatted = withoutTags
+                    .replace(/([a-zA-Z])\^(\d+)/g, '<span class="math-var">$1</span><sup class="math-sup">$2</sup>')
+                    .replace(/(^|[^a-zA-Z-])([a-zA-Z])(?![a-zA-Z0-9])/g, '$1<span class="math-var">$2</span>');
+
+                return formatted.replace(/(\d+)/g, (_, idx) => tags[Number(idx)]);
+            }
+
+            function polyTrim(c) {
+                const out = c.map(v => (Math.abs(v) < 1e-12 ? 0 : v));
+                while (out.length > 1 && out[out.length - 1] === 0) out.pop();
+                return out.length ? out : [0];
+            }
+            function polyDeg(c) { return polyTrim(c).length - 1; }
+            function polyAdd(a, b) {
+                const n = Math.max(a.length, b.length);
+                const out = [];
+                for (let i = 0; i < n; i++) out.push((a[i] || 0) + (b[i] || 0));
+                return polyTrim(out);
+            }
+            function polyScale(a, k) { return polyTrim(a.map(v => v * k)); }
+            function polyMul(a, b) {
+                const out = new Array(a.length + b.length - 1).fill(0);
+                for (let i = 0; i < a.length; i++) {
+                    for (let j = 0; j < b.length; j++) out[i + j] += a[i] * b[j];
+                }
+                return polyTrim(out);
+            }
+            function polyDeriv(a) {
+                if (a.length <= 1) return [0];
+                return polyTrim(a.slice(1).map((v, i) => v * (i + 1)));
+            }
+            function polyTermCount(a) { return polyTrim(a).filter(v => v !== 0).length; }
+            function polyIsConst(a, k) {
+                const t = polyTrim(a);
+                return t.length === 1 && (k === undefined || t[0] === k);
+            }
+            function polyIsX(a) {
+                const t = polyTrim(a);
+                return t.length === 2 && t[0] === 0 && t[1] === 1;
+            }
+            function polyLeading(a) {
+                const t = polyTrim(a);
+                for (let i = t.length - 1; i >= 0; i--) if (t[i] !== 0) return t[i];
+                return 0;
+            }
+            function polyEqual(a, b) {
+                const x = polyTrim(a), y = polyTrim(b);
+                return x.length === y.length && x.every((v, i) => v === y[i]);
+            }
+
+            // LaTeX van een veelterm (hoogste macht eerst)
+            function polyLatex(c) {
+                const t = polyTrim(c);
+                let s = "";
+                for (let i = t.length - 1; i >= 0; i--) {
+                    const k = t[i];
+                    if (k === 0) continue;
+                    const abs = Math.abs(k);
+                    let body;
+                    if (i === 0) body = String(abs);
+                    else body = (abs === 1 ? "" : String(abs)) + (i === 1 ? "x" : `x^{${i}}`);
+                    if (s === "") s = (k < 0 ? "-" : "") + body;
+                    else s += (k < 0 ? " - " : " + ") + body;
+                }
+                return s || "0";
+            }
+
+            // HTML van een veelterm; compact = zonder spaties (voor in exponenten)
+            function polyHtml(c, compact) {
+                const t = polyTrim(c);
+                const plus = compact ? "+" : " + ";
+                const minus = compact ? "−" : " − ";
+                let s = "";
+                for (let i = t.length - 1; i >= 0; i--) {
+                    const k = t[i];
+                    if (k === 0) continue;
+                    const abs = Math.abs(k);
+                    let body;
+                    if (i === 0) body = String(abs);
+                    else body = (abs === 1 ? "" : String(abs)) + `<span class="math-var">x</span>` + (i === 1 ? "" : `<sup class="math-sup">${i}</sup>`);
+                    if (s === "") s = (k < 0 ? "−" : "") + body;
+                    else s += (k < 0 ? minus : plus) + body;
+                }
+                return s || "0";
+            }
+
+            function eLatex(g) { return `e^{${polyLatex(g)}}`; }
+            function eHtml(g) { return `<span class="math-var">e</span><sup class="math-sup">${polyHtml(g, true)}</sup>`; }
+
+            // Factor vóór de e-macht: 1 → "", −1 → "−", eenterm → zonder haakjes, meerterm → met haakjes
+            function frontLatex(c, useDot) {
+                const t = polyTrim(c);
+                if (polyIsConst(t, 1)) return "";
+                if (polyIsConst(t, -1)) return "-";
+                const isNum = polyIsConst(t);
+                const body = polyTermCount(t) > 1 ? `(${polyLatex(t)})` : polyLatex(t);
+                return body + ((useDot && !isNum) ? "\\cdot " : "");
+            }
+            function frontHtml(c, useDot) {
+                const t = polyTrim(c);
+                if (polyIsConst(t, 1)) return "";
+                if (polyIsConst(t, -1)) return "−";
+                const isNum = polyIsConst(t);
+                const body = polyTermCount(t) > 1 ? `(${polyHtml(t)})` : polyHtml(t);
+                return body + ((useDot && !isNum) ? " · " : "");
+            }
+
+            // Product van factoren (veeltermen of {e: g}) als LaTeX / HTML
+            function factorLatex(f, isFirst) {
+                if (f.e) return eLatex(f.e);
+                const t = polyTrim(f);
+                const s = polyLatex(t);
+                if (polyTermCount(t) > 1 || (!isFirst && polyLeading(t) < 0)) return `(${s})`;
+                return s;
+            }
+            function factorHtml(f, isFirst) {
+                if (f.e) return eHtml(f.e);
+                const t = polyTrim(f);
+                const s = polyHtml(t);
+                if (polyTermCount(t) > 1 || (!isFirst && polyLeading(t) < 0)) return `(${s})`;
+                return s;
+            }
+            function mulLatex(factors) { return factors.map((f, i) => factorLatex(f, i === 0)).join(" \\cdot "); }
+            function mulHtml(factors) { return factors.map((f, i) => factorHtml(f, i === 0)).join(" · "); }
+            function joinSumLatex(a, b) { return b.startsWith("-") ? `${a} - ${b.slice(1)}` : `${a} + ${b}`; }
+            function joinSumHtml(a, b) { return b.startsWith("−") ? `${a} − ${b.slice(1)}` : `${a} + ${b}`; }
+
+            /* =================================================================
+               3. OPGAVE-OPBOUW: f(x) = p(x) · e^{g(x)}
+                  f'(x) = (p'(x) + p(x)·g'(x)) · e^{g(x)}
+               ================================================================= */
+            function buildEProblem(category, pIn, gIn) {
+                const p = polyTrim(pIn);
+                const g = polyTrim(gIn);
+                const dp = polyDeriv(p);
+                const dg = polyDeriv(g);
+                const isChain = polyIsConst(p);                 // c · e^{g}
+                const gIsX = polyIsX(g);
+                const needsChain = !gIsX;
+                const c = p[0];
+
+                const q = isChain ? polyScale(dg, c) : polyAdd(dp, polyMul(p, dg));
+                const E = { e: g };
+
+                const fLatexBody = isChain ? `${frontLatex(p, false)}${eLatex(g)}` : `${frontLatex(p, true)}${eLatex(g)}`;
+                const fHtmlBody = isChain ? `${frontHtml(p, false)}${eHtml(g)}` : `${frontHtml(p, true)}${eHtml(g)}`;
+                const simplifiedLatex = `${frontLatex(q, polyTermCount(q) === 1 && !polyIsConst(q))}${eLatex(g)}`;
+                const simplifiedHtml = `${frontHtml(q, polyTermCount(q) === 1 && !polyIsConst(q))}${eHtml(g)}`;
+
+                // Tussenvorm (letterlijk de regel ingevuld)
+                let middleLatex, middleHtml;
+                if (isChain) {
+                    const facs = [];
+                    if (!polyIsConst(p, 1)) facs.push(p);
+                    facs.push(E, dg);
+                    middleLatex = mulLatex(facs);
+                    middleHtml = mulHtml(facs);
+                } else {
+                    const termA = [dp, E];
+                    const termB = polyIsConst(dg, 1) ? [p, E] : [p, dg, E];
+                    middleLatex = joinSumLatex(mulLatex(termA), mulLatex(termB));
+                    middleHtml = joinSumHtml(mulHtml(termA), mulHtml(termB));
+                }
+
+                const gHtml = polyHtml(g);
+                const dgHtml = polyHtml(dg);
+                const pHtml = polyHtml(p);
+                const dpHtml = polyHtml(dp);
+                const vPrimeHtml = polyIsConst(dg, 1) ? eHtml(g) : mulHtml([E, dg]);
+
+                // Veelgemaakte fouten (alleen gebruikt als de invoer niet gelijk is aan f')
+                const wrongs = [];
+                wrongs.push({
+                    latex: fLatexBody,
+                    msg: "Dit is gelijk aan f(x) zelf. Je moet nog differentiëren!"
+                });
+                if (needsChain) {
+                    wrongs.push({
+                        latex: isChain
+                            ? (polyIsConst(p, 1) ? eLatex(g) : mulLatex([p, E]))
+                            : joinSumLatex(mulLatex([dp, E]), mulLatex([p, E])),
+                        msg: `Je bent de kettingregel vergeten: de afgeleide van ${eHtml(g)} is ${eHtml(g)} · (${dgHtml}).`
+                    });
+                }
+                if (!isChain) {
+                    wrongs.push({
+                        latex: mulLatex([dp, E, dg]),
+                        msg: "Let op de productregel: f′ is niet u′ · v′, maar u′ · v + u · v′."
+                    });
+                }
+
+                const label = `f(<span class="math-var">x</span>) = ${fHtmlBody}`;
+
+                let explanations, banners;
+                if (isChain) {
+                    const cTxt = polyIsConst(p, 1) ? "" : ` De constante factor ${c} blijft gewoon staan.`;
+                    explanations = [
+                        {
+                            title: "Stap 1: De functie",
+                            body: `f(x) = ${fHtmlBody}. Dit is een e-macht met in de exponent de veelterm ${gHtml}.` + (polyIsConst(p, 1) ? "" : ` Er staat een constante factor ${c} voor.`),
+                            rule: `Kettingregel: (e<sup class="math-sup">g(x)</sup>)′ = e<sup class="math-sup">g(x)</sup> · g′(x).`
+                        },
+                        {
+                            title: "Stap 2: Regel herkennen",
+                            body: gIsX
+                                ? `De exponent is gewoon x. De afgeleide van e<sup class="math-sup">x</sup> is e<sup class="math-sup">x</sup> zelf.${cTxt}`
+                                : `De buitenfunctie is e<sup class="math-sup">□</sup> en de binnenfunctie is g(x) = ${gHtml}. Daarom gebruik je de kettingregel.${cTxt}`,
+                            rule: "Een getal vóór de e-macht blijft staan: (c · e<sup class=\"math-sup\">g</sup>)′ = c · e<sup class=\"math-sup\">g</sup> · g′."
+                        },
+                        {
+                            title: "Stap 3: Delen differentiëren",
+                            body: `Differentieer de binnenfunctie: g′(x) = ${dgHtml}. De e-macht zelf verandert niet: de afgeleide van e<sup class="math-sup">□</sup> is weer e<sup class="math-sup">□</sup>.`,
+                            rule: "Let op: de exponent blijft hetzelfde, je vermenigvuldigt alleen met g′(x)!"
+                        },
+                        {
+                            title: "Stap 4: Samenvoegen",
+                            body: `Vermenigvuldig alles: f′(x) = ${middleHtml} = <strong>${simplifiedHtml}</strong>.`,
+                            rule: "Schrijf het getal (of de veelterm) vóór de e-macht en vereenvoudig zo ver mogelijk."
+                        }
+                    ];
+                    banners = [
+                        [],
+                        gIsX
+                            ? [`f(x) = ${fHtmlBody} → de exponent is x, dus g′(x) = 1.`]
+                            : [`Buitenfunctie: e<sup class="math-sup">□</sup> &nbsp;•&nbsp; binnenfunctie: g(x) = ${gHtml}`,
+                               `Kettingregel: f′(x) = ${polyIsConst(p, 1) ? "" : c + " · "}${eHtml(g)} · g′(x)`],
+                        [`g(x) = ${gHtml} ⇒ <strong style="color: var(--teal-dark);">g′(x) = ${dgHtml}</strong>`,
+                         `(e<sup class="math-sup">□</sup>)′ = e<sup class="math-sup">□</sup> → ${eHtml(g)} blijft staan`],
+                        [`f′(x) = ${middleHtml}`,
+                         `<strong style="color: var(--emerald-dark);">f′(x) = ${simplifiedHtml}</strong>`]
+                    ];
+                } else {
+                    explanations = [
+                        {
+                            title: "Stap 1: De functie",
+                            body: `f(x) = ${fHtmlBody} is een product van twee functies van x: een veelterm en een e-macht.`,
+                            rule: "Productregel: (u · v)′ = u′ · v + u · v′."
+                        },
+                        {
+                            title: "Stap 2: Regel herkennen",
+                            body: `Neem u = ${pHtml} en v = ${eHtml(g)}. Omdat f = u · v gebruik je de productregel.` +
+                                (needsChain ? ` Voor v′ heb je óók de kettingregel nodig, want de exponent is ${gHtml}.` : ""),
+                            rule: needsChain
+                                ? `Kettingregel voor v: (e<sup class="math-sup">g(x)</sup>)′ = e<sup class="math-sup">g(x)</sup> · g′(x).`
+                                : "Productregel: f′ = u′ · v + u · v′."
+                        },
+                        {
+                            title: "Stap 3: Delen differentiëren",
+                            body: `u = ${pHtml} geeft u′ = ${dpHtml}. ` +
+                                (needsChain
+                                    ? `v = ${eHtml(g)} geeft met de kettingregel v′ = ${vPrimeHtml}.`
+                                    : `v = e<sup class="math-sup">x</sup> geeft v′ = e<sup class="math-sup">x</sup>.`),
+                            rule: needsChain
+                                ? "Vergeet niet bij v′ te vermenigvuldigen met de afgeleide van de exponent!"
+                                : "De afgeleide van eˣ is eˣ zelf."
+                        },
+                        {
+                            title: "Stap 4: Samenvoegen",
+                            body: `Vul in: f′(x) = u′ · v + u · v′ = ${middleHtml}. Haal ${eHtml(g)} buiten haakjes: f′(x) = <strong>${simplifiedHtml}</strong>.`,
+                            rule: "Breng de e-macht buiten haakjes en tel gelijksoortige termen binnen de haakjes op."
+                        }
+                    ];
+                    banners = [
+                        [],
+                        [`<strong style="color: var(--emerald-dark);">u = ${pHtml}</strong> &nbsp;•&nbsp; <strong style="color: var(--amber-dark);">v = ${eHtml(g)}</strong>`,
+                         `Productregel: f′(x) = u′ · v + u · v′`].concat(needsChain ? [`Bij v hoort de kettingregel (binnenfunctie ${gHtml}).`] : []),
+                        [`u = ${pHtml} ⇒ <strong style="color: var(--emerald-dark);">u′ = ${dpHtml}</strong>`,
+                         needsChain
+                            ? `v = ${eHtml(g)} ⇒ <strong style="color: var(--amber-dark);">v′ = ${vPrimeHtml}</strong> (kettingregel: · ${polyTermCount(dg) > 1 ? "(" + dgHtml + ")" : dgHtml})`
+                            : `v = ${eHtml(g)} ⇒ <strong style="color: var(--amber-dark);">v′ = ${eHtml(g)}</strong>`],
+                        [`f′(x) = u′ · v + u · v′ = ${middleHtml}`,
+                         `<strong style="color: var(--emerald-dark);">f′(x) = ${simplifiedHtml}</strong> (${eHtml(g)} buiten haakjes)`]
+                    ];
+                }
+
+                return {
+                    label,
+                    category,
+                    isChain,
+                    needsChain,
+                    p, g, dp, dg, q, c,
+                    fHtml: fHtmlBody,
+                    equationLatex: `f(x) = ${fLatexBody}`,
+                    fLatex: fLatexBody,
+                    derivLatex: simplifiedLatex,
+                    middleLatex,
+                    simplifiedLatex,
+                    simplifiedHtml,
+                    wrongs,
+                    banners,
+                    explanations
+                };
+            }
+
+            const EXAMPLES = [
+                // Niveau 1: Basis
+                buildEProblem("Basis", [1], [0, 3]),
+                buildEProblem("Basis", [4], [0, -1]),
+                buildEProblem("Basis", [1], [5, 2]),
+
+                // Niveau 2: Kettingregel
+                buildEProblem("Kettingregel", [1], [1, 0, 1]),
+                buildEProblem("Kettingregel", [5], [-3, 2]),
+                buildEProblem("Kettingregel", [2], [0, -4, 0, 1]),
+
+                // Niveau 3: Productregel
+                buildEProblem("Productregel", [0, 1], [0, 1]),
+                buildEProblem("Productregel", [0, 0, 1], [0, 1]),
+                buildEProblem("Productregel", [3, 1], [0, 1]),
+
+                // Niveau 4: Product + ketting
+                buildEProblem("Product + ketting", [0, 1], [0, 2]),
+                buildEProblem("Product + ketting", [1, 1], [0, -1]),
+                buildEProblem("Product + ketting", [0, 3], [2, 1]),
+
+                // Niveau 5: Uitdaging
+                buildEProblem("Uitdaging", [0, 0, 1], [0, 0, 1]),
+                buildEProblem("Uitdaging", [-1, 2], [1, 3]),
+                buildEProblem("Uitdaging", [1, 0, 1], [0, -2])
+            ];
+
+            /* =================================================================
+               4. WISKUNDIGE GELIJKWAARDIGHEIDSCONTROLE & VORMCONTROLE
+               ================================================================= */
+            function extractBraceGroup(str, startIdx) {
+                if (str[startIdx] !== "{") return null;
+                let depth = 0, i = startIdx;
+                while (i < str.length) {
+                    if (str[i] === "{") depth++;
+                    else if (str[i] === "}") {
+                        depth--;
+                        if (depth === 0) return { content: str.slice(startIdx + 1, i), nextIdx: i + 1 };
+                    }
+                    i++;
+                }
+                throw new Error("Sluitaccolade '}' ontbreekt.");
+            }
+
+            function normalizeFracCommands(str) {
+                let out = "", i = 0;
+                while (i < str.length) {
+                    if (str.startsWith("\\frac", i) && (i + 5 >= str.length || !/[a-zA-Z]/.test(str[i + 5]))) {
+                        let cursor = i + 5;
+                        while (cursor < str.length && /\s/.test(str[cursor])) cursor++;
+                        let numPart = "";
+                        if (str[cursor] === "{") {
+                            const grp = extractBraceGroup(str, cursor);
+                            numPart = grp.content;
+                            cursor = grp.nextIdx;
+                        } else if (cursor < str.length) {
+                            const m = str.slice(cursor).match(/^(\\[a-zA-Z]+|[0-9a-zA-Z])/);
+                            if (m) { numPart = m[1]; cursor += numPart.length; }
+                        }
+                        while (cursor < str.length && /\s/.test(str[cursor])) cursor++;
+                        let denPart = "";
+                        if (str[cursor] === "{") {
+                            const grp = extractBraceGroup(str, cursor);
+                            denPart = grp.content;
+                            cursor = grp.nextIdx;
+                        } else if (cursor < str.length) {
+                            const m = str.slice(cursor).match(/^(\\[a-zA-Z]+|[0-9a-zA-Z])/);
+                            if (m) { denPart = m[1]; cursor += denPart.length; }
+                        }
+                        out += `\\frac{${numPart}}{${denPart}}`;
+                        i = cursor;
+                        continue;
+                    }
+                    out += str[i];
+                    i++;
+                }
+                return out;
+            }
+
+            function normalizeFormulaLatex(raw) {
+                let s = raw || "";
+                if (/\\placeholder/.test(s)) {
+                    throw new Error("Vul eerst alle lege vakjes in de formule in.");
+                }
+                s = s.replace(/\\displaystyle|\\textstyle|\\scriptstyle|\\scriptscriptstyle/g, "");
+                s = s.replace(/\\dfrac|\\tfrac/g, "\\frac");
+                s = s.replace(/\\exponentialE/g, "e");
+                s = s.replace(/\\exp\s*/g, "e^");
+                s = s.replace(/\\(?:left|bigl|Bigl|big)?(?:\(|\[)/g, "(");
+                s = s.replace(/\\(?:right|bigr|Bigr|big)?(?:\)|\])/g, ")");
+                s = s.replace(/\\cdot|\\times/g, "*");
+                s = s.replace(/\\div|:/g, "/");
+                s = s.replace(/\\,|\\;|\\:|\\>|\\!|\\quad|\\qquad|\\ |~/g, "");
+                s = s.replace(/\\(?:mathrm|text|operatorname|mathit)\{([^}]*)\}/g, "$1");
+                s = s.replace(/\{,\}|,/g, ".");
+                s = s.replace(/_\s*\{\s*\}/g, "");
+                while (/\{\}/.test(s)) s = s.replace(/\{\}/g, "");
+                s = normalizeFracCommands(s);
+                return s.trim();
+            }
+
+            function tokenizeFormula(str) {
+                const tokens = [];
+                let i = 0;
+                while (i < str.length) {
+                    const ch = str[i];
+                    if (/\s/.test(ch)) { i++; continue; }
+                    if (/[0-9.]/.test(ch)) {
+                        let numStr = "";
+                        while (i < str.length && /[0-9.]/.test(str[i])) { numStr += str[i]; i++; }
+                        tokens.push({ type: "NUMBER", value: parseFloat(numStr) });
+                        continue;
+                    }
+                    if (/[a-zA-Z]/.test(ch)) {
+                        tokens.push({ type: "VAR", name: ch });
+                        i++;
+                        continue;
+                    }
+                    if (ch === "\\") {
+                        let cmd = "\\";
+                        i++;
+                        while (i < str.length && /[a-zA-Z]/.test(str[i])) { cmd += str[i]; i++; }
+                        if (cmd === "\\frac") tokens.push({ type: "FRAC" });
+                        else throw new Error(`Onbekend symbool: ${cmd}`);
+                        continue;
+                    }
+                    const simpleMap = {
+                        "+": "PLUS", "-": "MINUS", "*": "MUL", "/": "DIV",
+                        "^": "POW", "(": "LPAREN", ")": "RPAREN", "{": "LBRACE", "}": "RBRACE"
+                    };
+                    if (simpleMap[ch]) {
+                        tokens.push({ type: simpleMap[ch] });
+                        i++;
+                        continue;
+                    }
+                    throw new Error(`Ongeldig teken: "${ch}"`);
+                }
+                return tokens;
+            }
+
+            function parseFormulaAst(exprStr) {
+                const normalized = normalizeFormulaLatex(exprStr);
+                if (!normalized) throw new Error("Lege uitdrukking.");
+                const tokens = tokenizeFormula(normalized);
+                let pos = 0;
+                const peek = () => tokens[pos] || null;
+                const consume = () => tokens[pos++];
+
+                function parseExpr() {
+                    let left = parseTerm();
+                    while (peek() && (peek().type === "PLUS" || peek().type === "MINUS")) {
+                        const op = consume().type === "PLUS" ? "+" : "-";
+                        left = { op, left, right: parseTerm() };
+                    }
+                    return left;
+                }
+
+                function canStartImplicitFactor(tok) {
+                    return tok && ["NUMBER", "VAR", "FRAC", "LPAREN", "LBRACE"].includes(tok.type);
+                }
+
+                function parseTerm() {
+                    let left = parseUnary();
+                    while (peek()) {
+                        const next = peek();
+                        if (next.type === "MUL" || next.type === "DIV") {
+                            const op = consume().type === "MUL" ? "*" : "/";
+                            left = { op, left, right: parseUnary() };
+                        } else if (canStartImplicitFactor(next)) {
+                            left = { op: "*", left, right: parseUnary() };
+                        } else {
+                            break;
+                        }
+                    }
+                    return left;
+                }
+
+                function parseUnary() {
+                    const tok = peek();
+                    if (!tok) throw new Error("Onvolledige uitdrukking.");
+                    if (tok.type === "PLUS") { consume(); return parseUnary(); }
+                    if (tok.type === "MINUS") { consume(); return { op: "neg", expr: parseUnary() }; }
+                    return parsePower();
+                }
+
+                function parsePower() {
+                    let base = parsePrimary();
+                    if (peek() && peek().type === "POW") {
+                        consume();
+                        return { op: "^", base, exp: parseBraceOrPrimary() };
+                    }
+                    return base;
+                }
+
+                function parseBraceOrPrimary() {
+                    const tok = peek();
+                    if (!tok) throw new Error("Onvolledige macht.");
+                    if (tok.type === "LBRACE") {
+                        consume();
+                        const inner = parseExpr();
+                        if (!peek() || peek().type !== "RBRACE") throw new Error("Sluitaccolade '}' ontbreekt.");
+                        consume();
+                        return inner;
+                    }
+                    return parsePrimary();
+                }
+
+                function parsePrimary() {
+                    const tok = peek();
+                    if (!tok) throw new Error("Onvolledige uitdrukking.");
+                    if (tok.type === "NUMBER") { consume(); return { op: "num", value: tok.value }; }
+                    if (tok.type === "VAR") { consume(); return { op: "var", name: tok.name }; }
+                    if (tok.type === "LPAREN") {
+                        consume();
+                        const inner = parseExpr();
+                        if (!peek() || peek().type !== "RPAREN") throw new Error("Haakje ')' ontbreekt.");
+                        consume();
+                        return inner;
+                    }
+                    if (tok.type === "LBRACE") {
+                        consume();
+                        const inner = parseExpr();
+                        if (!peek() || peek().type !== "RBRACE") throw new Error("Sluitaccolade '}' ontbreekt.");
+                        consume();
+                        return inner;
+                    }
+                    if (tok.type === "FRAC") {
+                        consume();
+                        return { op: "/", left: parseBraceOrPrimary(), right: parseBraceOrPrimary() };
+                    }
+                    throw new Error("Onverwacht symbool.");
+                }
+
+                const ast = parseExpr();
+                if (pos < tokens.length) throw new Error("Controleer de haakjes en tekens.");
+                return ast;
+            }
+
+            function evalFormulaAst(node, env) {
+                if (!node) return NaN;
+                switch (node.op) {
+                    case "num": return node.value;
+                    case "var":
+                        if (Object.prototype.hasOwnProperty.call(env, node.name)) return env[node.name];
+                        return node.name === "e" ? Math.E : NaN;
+                    case "neg": return -evalFormulaAst(node.expr, env);
+                    case "+": return evalFormulaAst(node.left, env) + evalFormulaAst(node.right, env);
+                    case "-": return evalFormulaAst(node.left, env) - evalFormulaAst(node.right, env);
+                    case "*": return evalFormulaAst(node.left, env) * evalFormulaAst(node.right, env);
+                    case "/": {
+                        const d = evalFormulaAst(node.right, env);
+                        if (!Number.isFinite(d) || Math.abs(d) < 1e-12) return NaN;
+                        return evalFormulaAst(node.left, env) / d;
+                    }
+                    case "^": {
+                        const b = evalFormulaAst(node.base, env);
+                        const e = evalFormulaAst(node.exp, env);
+                        return Number.isFinite(b) && Number.isFinite(e) ? Math.pow(b, e) : NaN;
+                    }
+                    default: return NaN;
+                }
+            }
+
+            function collectAstVars(node, outSet) {
+                if (!node) return;
+                if (node.op === "var" && node.name !== "e") outSet.add(node.name);
+                if (node.left) collectAstVars(node.left, outSet);
+                if (node.right) collectAstVars(node.right, outSet);
+                if (node.expr) collectAstVars(node.expr, outSet);
+                if (node.base) collectAstVars(node.base, outSet);
+                if (node.exp) collectAstVars(node.exp, outSet);
+            }
+
+            function areExpressionsEquivalent(targetAst, studentAst) {
+                const varSet = new Set(["x"]);
+                collectAstVars(targetAst, varSet);
+                collectAstVars(studentAst, varSet);
+                const vars = Array.from(varSet);
+
+                const sampleVals = [-1.3, -0.6, 0.35, 0.8, 1.45, 2.1];
+                let tested = 0;
+
+                for (let s = 0; s < sampleVals.length; s++) {
+                    const env = {};
+                    vars.forEach((v, idx) => {
+                        env[v] = sampleVals[(s + idx) % sampleVals.length];
+                    });
+                    const tVal = evalFormulaAst(targetAst, env);
+                    const uVal = evalFormulaAst(studentAst, env);
+                    if (Number.isFinite(tVal) && Number.isFinite(uVal)) {
+                        tested++;
+                        if (Math.abs(tVal - uVal) > 1e-7 * Math.max(1, Math.abs(tVal))) return false;
+                    }
+                }
+                return tested >= 3;
+            }
+
+            // --- Vormcontrole van het eindantwoord: (veelterm) · e^{g(x)}, vereenvoudigd ---
+            function isEPower(n) {
+                return (n.op === "^" && n.base && n.base.op === "var" && n.base.name === "e") ||
+                       (n.op === "var" && n.name === "e");
+            }
+            function containsE(n) {
+                if (!n) return false;
+                if (n.op === "var") return n.name === "e";
+                return containsE(n.left) || containsE(n.right) || containsE(n.expr) || containsE(n.base) || containsE(n.exp);
+            }
+            function flattenProduct(n, out) {
+                if (n.op === "*") { flattenProduct(n.left, out); flattenProduct(n.right, out); }
+                else if (n.op === "neg") flattenProduct(n.expr, out);
+                else out.push(n);
+                return out;
+            }
+            function countAddTerms(n) {
+                if (n.op === "+" || n.op === "-") return countAddTerms(n.left) + countAddTerms(n.right);
+                if (n.op === "neg") return countAddTerms(n.expr);
+                return 1;
+            }
+
+            function isSingleSimplifiedResult(studentStr, prob) {
+                const rhs = studentStr.includes("=") ? studentStr.split("=").pop().trim() : studentStr;
+                let ast;
+                try { ast = parseFormulaAst(rhs); } catch (e) { return false; }
+
+                const factors = flattenProduct(ast, []);
+                const ePows = factors.filter(isEPower);
+                if (ePows.length !== 1) return false;
+                const others = factors.filter(f => !isEPower(f));
+                if (others.some(containsE)) return false;
+                if (others.some(f => f.op === "/")) return false;
+                if (others.filter(f => f.op === "num").length > 1) return false;
+                const sums = others.filter(f => f.op === "+" || f.op === "-");
+                if (sums.length > 1) return false;
+
+                const targetTerms = polyTermCount(prob.q);
+                if (sums.length === 1) return countAddTerms(sums[0]) === targetTerms;
+                return targetTerms === 1;
+            }
+
+            /* =================================================================
+               5. OPGAVEGENERATOR OP VERSCHILLENDE NIVEAUS
+               ================================================================= */
+            function randInt(min, max) {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+
+            function randChoice(arr) {
+                return arr[Math.floor(Math.random() * arr.length)];
+            }
+
+            function randNonZero(min, max) {
+                let v = 0;
+                while (v === 0) v = randInt(min, max);
+                return v;
+            }
+
+            function generatePracticeProblem(categoryChoice) {
+                const categories = ["Basis", "Kettingregel", "Productregel", "Product + ketting", "Uitdaging"];
+                const cat = categoryChoice === "mixed" ? randChoice(categories) : categoryChoice;
+
+                if (cat === "Basis") {
+                    const a = randChoice([2, 3, 4, 5, -1, -2, -3]);
+                    const type = randInt(0, 2);
+                    if (type === 0) return buildEProblem(cat, [1], [0, a]);
+                    if (type === 1) return buildEProblem(cat, [randChoice([2, 3, 4, 5, -2])], [0, a]);
+                    return buildEProblem(cat, [1], [randNonZero(-5, 5), a]);
+                }
+
+                if (cat === "Kettingregel") {
+                    const c = randChoice([1, 1, 2, 3, 5, -2]);
+                    const type = randInt(0, 3);
+                    if (type === 0) return buildEProblem(cat, [c], [randNonZero(-4, 4), 0, 1]);                       // e^{x²+b}
+                    if (type === 1) return buildEProblem(cat, [c], [0, randNonZero(-5, 5), randChoice([1, 2, -1])]);   // e^{ax²+bx}
+                    if (type === 2) return buildEProblem(cat, [randChoice([2, 3, 4, 5])], [randNonZero(-4, 4), randChoice([2, 3, -2])]); // c·e^{ax+b}
+                    return buildEProblem(cat, [c], [randNonZero(-3, 3), 0, 0, 1]);                                    // e^{x³+b}
+                }
+
+                if (cat === "Productregel") {
+                    const pOpts = [
+                        [0, randChoice([1, 2, 3, 4])],
+                        [0, 0, 1],
+                        [randNonZero(-4, 4), 1],
+                        [randNonZero(-5, 5), randChoice([2, 3])],
+                        [0, 0, 0, 1],
+                        [randNonZero(-3, 3), 0, 1]
+                    ];
+                    return buildEProblem(cat, randChoice(pOpts), [0, 1]);
+                }
+
+                if (cat === "Product + ketting") {
+                    const p = randChoice([[0, 1], [0, randChoice([2, 3])], [randNonZero(-3, 3), 1], [randNonZero(-3, 3), 2]]);
+                    const g = [randChoice([0, 0, 1, -1, 2]), randChoice([2, 3, 4, -1, -2])];
+                    return buildEProblem(cat, p, g);
+                }
+
+                // Niveau 5: Uitdaging
+                const type = randInt(0, 3);
+                if (type === 0) return buildEProblem(cat, [0, 0, 1], [randChoice([0, 1, -1]), 0, randChoice([1, -1])]);
+                if (type === 1) return buildEProblem(cat, [randNonZero(-3, 3), randChoice([2, 3])], [randNonZero(-3, 3), randChoice([2, 3, -2])]);
+                if (type === 2) return buildEProblem(cat, [randNonZero(-3, 3), 0, 1], [0, randChoice([-2, -1, 2, 3])]);
+                return buildEProblem(cat, [0, 1], [randNonZero(-2, 2), 0, 1]);
+            }
+
+            /* =================================================================
+               6. ANIMATIEPODIUM ENGINE (4 STAPPEN: KETTINGREGEL & PRODUCTREGEL)
+               ================================================================= */
+            let activeAnimProblem = EXAMPLES[0];
+            let animStep = 0;
+            let speedMult = 1.0;
+            let animTimers = [];
+            let autoPlayTimer = null;
+            let autoPlayTicker = null;
+            let arcActive = false;
+
+            const elStageRow = document.getElementById("expr-stage-row");
+            const elStage = document.getElementById("fraction-stage");
+            const elSvg = document.getElementById("connector-svg");
+            const elDecompBanner = document.getElementById("decomp-banner");
+            const elDecompLines = document.getElementById("decomp-banner-lines");
+
+            function clearAnimTimers() {
+                animTimers.forEach(id => clearTimeout(id));
+                animTimers = [];
+            }
+
+            function scheduleAnim(fn, delayMs) {
+                const id = setTimeout(fn, Math.round(delayMs * speedMult));
+                animTimers.push(id);
+                return id;
+            }
+
+            function stopAutoPlay() {
+                if (autoPlayTimer) {
+                    clearTimeout(autoPlayTimer);
+                    autoPlayTimer = null;
+                }
+                clearInterval(autoPlayTicker);
+                document.getElementById("autoplay-fill").style.width = "0%";
+                document.getElementById("autoplay-icon").textContent = "▶";
+                document.getElementById("autoplay-text").textContent = "Speel alles af";
+            }
+
+            function clearSvgLines() {
+                elSvg.innerHTML = "";
+            }
+
+            // Boog onder twee blokjes in dezelfde rij (gemeenschappelijke factor / samen te nemen factoren)
+            function drawArc(isFaded) {
+                const chips = elStage.querySelectorAll("[data-pair-id='common']");
+                if (chips.length < 2) return;
+                const stageRect = elStage.getBoundingClientRect();
+                let path = elSvg.querySelector("path[data-pair='common']");
+                if (!path) {
+                    path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    path.setAttribute("data-pair", "common");
+                    elSvg.appendChild(path);
+                }
+                let d = "";
+                for (let i = 0; i < chips.length - 1; i++) {
+                    const rA = chips[i].getBoundingClientRect();
+                    const rB = chips[i + 1].getBoundingClientRect();
+                    const x1 = rA.left - stageRect.left + rA.width / 2;
+                    const y1 = rA.bottom - stageRect.top + 2;
+                    const x2 = rB.left - stageRect.left + rB.width / 2;
+                    const y2 = rB.bottom - stageRect.top + 2;
+                    const depth = 26;
+                    d += `M ${x1} ${y1} C ${x1} ${y1 + depth}, ${x2} ${y2 + depth}, ${x2} ${y2} `;
+                }
+                path.setAttribute("d", d);
+                path.setAttribute("class", isFaded ? "connector-path faded" : "connector-path");
+            }
+
+            function redrawAllConnectors() {
+                clearSvgLines();
+                if (arcActive) drawArc(true);
+            }
+
+            function createChip(item, extraCls) {
+                const span = document.createElement("span");
+                span.className = `factor-chip math-font type-${item.type}${extraCls ? " " + extraCls : ""}`;
+                span.innerHTML = item.html;
+                if (item.pairId) span.dataset.pairId = item.pairId;
+                if (item.tag) {
+                    const cTag = document.createElement("span");
+                    cTag.className = "cancel-tag";
+                    cTag.innerHTML = item.tag;
+                    span.appendChild(cTag);
+                }
+                return span;
+            }
+
+            function createDot(symbol) {
+                const s = document.createElement("span");
+                s.className = "dot-sep math-font";
+                s.textContent = symbol || "·";
+                return s;
+            }
+
+            // Kader met (optioneel) label bovenaan en een rij blokjes
+            function buildChipBox(items, options = {}) {
+                const box = document.createElement("div");
+                box.className = "single-frac-box math-font" + (options.badge ? " flipped-box" : "") + (options.animCls ? " " + options.animCls : "");
+
+                if (options.badge) {
+                    const badge = document.createElement("span");
+                    badge.className = "flip-badge";
+                    badge.innerHTML = options.badge;
+                    box.appendChild(badge);
+                }
+
+                const row = document.createElement("div");
+                row.className = "fraction-row anim-numerator";
+                if (options.prefix) row.appendChild(createDot(options.prefix));
+                items.forEach((it) => {
+                    if (it.sep) { row.appendChild(createDot(it.sep)); return; }
+                    row.appendChild(createChip(it, it.cls || options.chipCls || ""));
+                });
+                box.appendChild(row);
+                return box;
+            }
+
+            function opBadge(symbol, isAlt) {
+                const b = document.createElement("span");
+                b.className = `stage-op-badge math-font ${isAlt ? "op-div" : "op-mul"}`;
+                b.textContent = symbol;
+                return b;
+            }
+
+            function polyChip(c, type, extra) {
+                const t = polyTrim(c);
+                const html = polyTermCount(t) > 1 ? `(${polyHtml(t)})` : polyHtml(t);
+                return Object.assign({ html, type }, extra || {});
+            }
+            function eChip(g, extra) {
+                return Object.assign({ html: eHtml(g), type: "group" }, extra || {});
+            }
+
+            function renderAnimStep(silent) {
+                clearAnimTimers();
+                clearSvgLines();
+                arcActive = false;
+
+                for (let i = 0; i < 4; i++) {
+                    const tab = document.getElementById(`step-tab-${i}`);
+                    tab.classList.remove("active", "done");
+                    if (i === animStep) tab.classList.add("active");
+                    else if (i < animStep) tab.classList.add("done");
+                }
+
+                document.getElementById("btn-prev").disabled = animStep === 0;
+                document.getElementById("btn-next").disabled = animStep === 3;
+                document.getElementById("anim-current-label").innerHTML =
+                    `Opgave: <strong class="math-font">${activeAnimProblem.label}</strong>`;
+
+                const exp = activeAnimProblem.explanations[animStep];
+                document.getElementById("explain-cat-badge").textContent = activeAnimProblem.category;
+                document.getElementById("explain-title").innerHTML = formatMathText(exp.title);
+                document.getElementById("explain-body").innerHTML = formatMathText(exp.body);
+                document.getElementById("explain-rule").innerHTML = formatMathText(exp.rule);
+
+                const bannerLines = activeAnimProblem.banners[animStep] || [];
+                if (bannerLines.length > 0) {
+                    elDecompLines.innerHTML = bannerLines.map(l => `<div>${formatMathText(l)}</div>`).join("");
+                    elDecompBanner.classList.remove("hidden");
+                } else {
+                    elDecompBanner.classList.add("hidden");
+                }
+
+                elStageRow.innerHTML = "";
+                const p = activeAnimProblem;
+                const fPrefix = "f(x) =";
+
+                // STAP 1: De functie
+                if (animStep === 0) {
+                    const items = [];
+                    if (p.isChain) {
+                        if (!polyIsConst(p.p, 1)) items.push(polyChip(p.p, "num"), { sep: "·" });
+                        items.push(eChip(p.g));
+                    } else {
+                        items.push(polyChip(p.p, "var1"), { sep: "·" }, eChip(p.g));
+                    }
+                    elStageRow.appendChild(buildChipBox(items, { prefix: fPrefix, animCls: "anim-enter" }));
+                }
+
+                // STAP 2: Regel herkennen (u en v, of buiten- en binnenfunctie)
+                else if (animStep === 1) {
+                    if (!silent) Sound.ping(1);
+                    if (p.isChain) {
+                        if (!polyIsConst(p.p, 1)) {
+                            elStageRow.appendChild(buildChipBox([polyChip(p.p, "num")], { badge: "constante", animCls: "anim-enter" }));
+                            elStageRow.appendChild(opBadge("·"));
+                        }
+                        elStageRow.appendChild(buildChipBox([{ html: `<span class="math-var">e</span><sup class="math-sup">□</sup>`, type: "group" }], { badge: "buitenfunctie", animCls: "anim-enter" }));
+                        elStageRow.appendChild(opBadge("∘", true));
+                        elStageRow.appendChild(buildChipBox([polyChip(p.g, "var2")], { badge: "binnen: g(<i>x</i>)", animCls: "anim-flip" }));
+                    } else {
+                        elStageRow.appendChild(buildChipBox([polyChip(p.p, "var1")], { badge: "u", animCls: "anim-enter" }));
+                        elStageRow.appendChild(opBadge("·"));
+                        elStageRow.appendChild(buildChipBox([eChip(p.g)], { badge: p.needsChain ? "v (kettingregel!)" : "v", animCls: "anim-flip" }));
+                    }
+                }
+
+                // STAP 3: Delen differentiëren
+                else if (animStep === 2) {
+                    if (p.isChain) {
+                        const box1 = buildChipBox([polyChip(p.dg, "var2")], { badge: "g′(<i>x</i>)", animCls: "anim-flip" });
+                        elStageRow.appendChild(box1);
+                        scheduleAnim(() => {
+                            if (!silent) Sound.ping(2);
+                            elStageRow.appendChild(opBadge("·"));
+                            elStageRow.appendChild(buildChipBox([eChip(p.g)], { badge: "e-macht blijft", animCls: "anim-enter" }));
+                        }, 550);
+                    } else {
+                        elStageRow.appendChild(buildChipBox([polyChip(p.dp, "var1")], { badge: "u′", animCls: "anim-flip" }));
+                        scheduleAnim(() => {
+                            if (!silent) Sound.ping(2);
+                            elStageRow.appendChild(opBadge("en", true));
+                            const vItems = [eChip(p.g)];
+                            if (!polyIsConst(p.dg, 1)) vItems.push({ sep: "·" }, polyChip(p.dg, "var2"));
+                            elStageRow.appendChild(buildChipBox(vItems, { badge: "v′", animCls: "anim-flip" }));
+                        }, 550);
+                    }
+                }
+
+                // STAP 4: Samenvoegen tot het eindantwoord
+                else if (animStep === 3) {
+                    const prefix = "f′(x) =";
+                    let items;
+                    if (p.isChain) {
+                        items = [];
+                        if (!polyIsConst(p.p, 1)) items.push(polyChip(p.p, "num", { pairId: "common" }), { sep: "·" });
+                        items.push(eChip(p.g), { sep: "·" }, polyChip(p.dg, "var2", { pairId: "common" }));
+                    } else {
+                        items = [polyChip(p.dp, "var1"), { sep: "·" }, eChip(p.g, { pairId: "common" }), { sep: "+" }, polyChip(p.p, "var1"), { sep: "·" }];
+                        if (!polyIsConst(p.dg, 1)) items.push(polyChip(p.dg, "var2"), { sep: "·" });
+                        items.push(eChip(p.g, { pairId: "common" }));
+                    }
+                    elStageRow.appendChild(buildChipBox(items, { prefix, animCls: "anim-enter" }));
+
+                    const hasMerge = elStage.querySelectorAll("[data-pair-id='common']").length >= 2;
+
+                    if (hasMerge) {
+                        scheduleAnim(() => {
+                            if (!silent) Sound.ping(1);
+                            elStage.querySelectorAll("[data-pair-id='common']").forEach(c => c.classList.add("pair-active-top"));
+                            arcActive = true;
+                            drawArc(false);
+                        }, 450);
+                    }
+
+                    scheduleAnim(() => {
+                        if (!silent) Sound.success();
+                        clearSvgLines();
+                        arcActive = false;
+                        elStageRow.innerHTML = "";
+                        const finalItems = [];
+                        if (!polyIsConst(p.q, 1)) {
+                            finalItems.push(polyIsConst(p.q, -1)
+                                ? { html: "−1", type: "var1" }
+                                : polyChip(p.q, polyIsConst(p.q) ? "num" : "var1"));
+                            finalItems.push({ sep: "·" });
+                        }
+                        finalItems.push(eChip(p.g));
+                        elStageRow.appendChild(buildChipBox(finalItems, { prefix, animCls: "anim-enter" }));
+                    }, hasMerge ? 1450 : 200);
+                }
+            }
+
+            function loadProblemIntoAnimation(problem, targetStep, silent) {
+                stopAutoPlay();
+                activeAnimProblem = problem;
+                animStep = Math.max(0, Math.min(3, targetStep));
+                renderAnimStep(Boolean(silent));
+            }
+
+            function goToAnimStep(stepIdx) {
+                stopAutoPlay();
+                animStep = Math.max(0, Math.min(3, stepIdx));
+                Sound.step();
+                renderAnimStep(false);
+            }
+
+            function toggleAutoPlay() {
+                if (autoPlayTimer) {
+                    stopAutoPlay();
+                    return;
+                }
+                if (animStep === 3) {
+                    animStep = 0;
+                    renderAnimStep(false);
+                }
+                document.getElementById("autoplay-icon").textContent = "⏸";
+                document.getElementById("autoplay-text").textContent = "Pauzeer";
+                const fillEl = document.getElementById("autoplay-fill");
+
+                const scheduleNext = () => {
+                    const extra = animStep === 2 ? 800 : 300;
+                    const totalMs = Math.round((2400 + extra) * speedMult);
+                    const start = performance.now();
+
+                    clearInterval(autoPlayTicker);
+                    autoPlayTicker = setInterval(() => {
+                        const pct = Math.min(100, ((performance.now() - start) / totalMs) * 100);
+                        fillEl.style.width = `${pct}%`;
+                    }, 35);
+
+                    autoPlayTimer = setTimeout(() => {
+                        clearInterval(autoPlayTicker);
+                        fillEl.style.width = "0%";
+                        if (animStep < 3) {
+                            animStep++;
+                            renderAnimStep(false);
+                            scheduleNext();
+                        } else {
+                            stopAutoPlay();
+                        }
+                    }, totalMs);
+                };
+
+                scheduleNext();
+            }
+
+            /* =================================================================
+               7. PARSER VOOR EIGEN FUNCTIE IN VERKENNINGSMODUS
+                  Vorm: (veelterm in x) · e^{veelterm in x}
+               ================================================================= */
+            function astToPoly(node) {
+                switch (node.op) {
+                    case "num": return [node.value];
+                    case "var":
+                        if (node.name === "x") return [0, 1];
+                        throw new Error("Gebruik alleen de variabele x.");
+                    case "neg": return polyScale(astToPoly(node.expr), -1);
+                    case "+": return polyAdd(astToPoly(node.left), astToPoly(node.right));
+                    case "-": return polyAdd(astToPoly(node.left), polyScale(astToPoly(node.right), -1));
+                    case "*": return polyMul(astToPoly(node.left), astToPoly(node.right));
+                    case "/": {
+                        const den = astToPoly(node.right);
+                        if (!polyIsConst(den) || den[0] === 0) throw new Error("Geen veelterm.");
+                        return polyScale(astToPoly(node.left), 1 / den[0]);
+                    }
+                    case "^": {
+                        const base = astToPoly(node.base);
+                        const ex = astToPoly(node.exp);
+                        if (!polyIsConst(ex) || !Number.isInteger(ex[0]) || ex[0] < 0 || ex[0] > 6) throw new Error("Geen veelterm.");
+                        let out = [1];
+                        for (let i = 0; i < ex[0]; i++) out = polyMul(out, base);
+                        return out;
+                    }
+                    default: throw new Error("Geen veelterm.");
+                }
+            }
+
+            function parseCustomEFunction(latex) {
+                try {
+                    let src = latex || "";
+                    if (src.includes("=")) src = src.split("=").pop();
+                    const ast = parseFormulaAst(src);
+
+                    // tel mintekens die vóór factoren staan
+                    let sign = 1;
+                    const collect = (n, out) => {
+                        if (n.op === "*") { collect(n.left, out); collect(n.right, out); }
+                        else if (n.op === "neg") { sign = -sign; collect(n.expr, out); }
+                        else out.push(n);
+                        return out;
+                    };
+                    const factors = collect(ast, []);
+                    const ePows = factors.filter(isEPower);
+                    if (ePows.length !== 1) return null;
+                    const others = factors.filter(f => !isEPower(f));
+                    if (others.some(containsE)) return null;
+
+                    const eNode = ePows[0];
+                    const g = eNode.op === "var" ? [1] : astToPoly(eNode.exp);
+                    let p = [sign];
+                    others.forEach(f => { p = polyMul(p, astToPoly(f)); });
+
+                    const okInts = arr => arr.every(v => Number.isInteger(Math.round(v * 1e9) / 1e9) && Math.abs(v) <= 60);
+                    p = polyTrim(p.map(v => Math.round(v * 1e9) / 1e9));
+                    const gg = polyTrim(g.map(v => Math.round(v * 1e9) / 1e9));
+                    if (!okInts(p) || !okInts(gg)) return null;
+                    if (polyDeg(gg) < 1 || polyDeg(gg) > 4 || polyDeg(p) > 4) return null;
+                    if (polyIsConst(p, 0)) return null;
+
+                    return buildEProblem("Eigen invoer", p, gg);
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            /* =================================================================
+               8. OEFENSTATUS & UI-KOPPELING
+               ================================================================= */
+            let questions = [];
+            let currentIndex = 0;
+            let activeScreenMode = "setup";
+            let toastTimer = null;
+
+            function showToast(msg) {
+                const toast = document.getElementById("toast");
+                const toastMsg = document.getElementById("toast-message");
+                if (!toast || !toastMsg) return;
+                toastMsg.textContent = msg;
+                toast.classList.add("show");
+                if (toastTimer) clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
+            }
+
+            document.addEventListener("DOMContentLoaded", async () => {
+                await customElements.whenDefined("math-field");
+
+                const setupScreen = document.getElementById("setup-screen");
+                const practiceScreen = document.getElementById("practice-screen");
+                const exploreScreen = document.getElementById("explore-screen");
+                const summaryScreen = document.getElementById("summary-screen");
+
+                const sharedAnimPanel = document.getElementById("shared-animation-panel");
+                const practiceGrid = practiceScreen.querySelector(".grid");
+                const exploreAnimSlot = document.getElementById("explore-animation-slot");
+
+                const modePracticeBtn = document.getElementById("mode-practice-btn");
+                const modeExploreBtn = document.getElementById("mode-explore-btn");
+                const setupOpenExploreBtn = document.getElementById("setup-open-explore-btn");
+                const btnBackToPractice = document.getElementById("btn-back-to-practice");
+
+                const questionCountInput = document.getElementById("question-count-input");
+                const difficultySelect = document.getElementById("difficulty-select");
+                const startBtn = document.getElementById("start-btn");
+                const presetBtns = document.querySelectorAll(".preset-btn");
+
+                const questionCounter = document.getElementById("question-counter");
+                const solvedCounter = document.getElementById("solved-counter");
+                const levelBadge = document.getElementById("level-badge");
+                const questionNavPills = document.getElementById("question-nav-pills");
+                const resetBtn = document.getElementById("reset-btn");
+
+                const currentEquationDisplay = document.getElementById("current-equation-display");
+                const questionStatusBadge = document.getElementById("question-status-badge");
+                const stepsContainer = document.getElementById("steps-container");
+                const nextStepLabel = document.getElementById("next-step-label");
+
+                const formulaInput = document.getElementById("formula-input");
+                const checkStepBtn = document.getElementById("check-step-btn");
+                const clearInputBtn = document.getElementById("clear-input-btn");
+                const feedbackBox = document.getElementById("feedback-box");
+
+                const prevBtn = document.getElementById("prev-btn");
+                const nextBtn = document.getElementById("next-btn");
+
+                const exploreFormulaInput = document.getElementById("explore-formula-input");
+                const btnExploreApply = document.getElementById("btn-explore-apply");
+                const btnRandomExplore = document.getElementById("btn-random-explore");
+                const exploreError = document.getElementById("explore-error");
+
+                const summaryScoreText = document.getElementById("summary-score-text");
+                const summaryList = document.getElementById("summary-list");
+                const backToQuestionsBtn = document.getElementById("back-to-questions-btn");
+                const restartNewBtn = document.getElementById("restart-new-btn");
+
+                // Exponenten als 2x of x²+1 moeten volledig in de macht blijven staan
+                [formulaInput, exploreFormulaInput].forEach(f => { f.smartSuperscript = false; });
+
+                function setModeTabStyles(isExplore) {
+                    if (isExplore) {
+                        modeExploreBtn.className = "px-3 py-1 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-sm transition-all";
+                        modePracticeBtn.className = "px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all";
+                    } else {
+                        modePracticeBtn.className = "px-3 py-1 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-sm transition-all";
+                        modeExploreBtn.className = "px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all";
+                    }
+                }
+
+                function placeAnimationPanelIn(targetContainer) {
+                    if (sharedAnimPanel.parentElement !== targetContainer) {
+                        targetContainer.appendChild(sharedAnimPanel);
+                    }
+                }
+
+                function switchToScreen(screenName) {
+                    stopAutoPlay();
+                    activeScreenMode = screenName;
+
+                    setupScreen.classList.add("hidden");
+                    practiceScreen.classList.add("hidden");
+                    exploreScreen.classList.add("hidden");
+                    summaryScreen.classList.add("hidden");
+
+                    if (screenName === "setup") {
+                        setModeTabStyles(false);
+                        setupScreen.classList.remove("hidden");
+                    } else if (screenName === "practice") {
+                        setModeTabStyles(false);
+                        placeAnimationPanelIn(practiceGrid);
+                        practiceScreen.classList.remove("hidden");
+                        renderCurrentQuestion();
+                    } else if (screenName === "explore") {
+                        setModeTabStyles(true);
+                        placeAnimationPanelIn(exploreAnimSlot);
+                        exploreScreen.classList.remove("hidden");
+                        renderExampleCategories();
+                        renderAnimStep(true);
+                    } else if (screenName === "summary") {
+                        setModeTabStyles(false);
+                        summaryScreen.classList.remove("hidden");
+                    }
+
+                    requestAnimationFrame(() => redrawAllConnectors());
+                }
+
+                function renderExampleCategories() {
+                    const container = document.getElementById("example-categories");
+                    container.innerHTML = "";
+                    const cats = [
+                        { name: "Basis", icon: "🌱", cls: "bg-slate-50 border-slate-200" },
+                        { name: "Kettingregel", icon: "⛓️", cls: "bg-emerald-50/50 border-emerald-200" },
+                        { name: "Productregel", icon: "🎯", cls: "bg-amber-50/50 border-amber-200" },
+                        { name: "Product + ketting", icon: "🧩", cls: "bg-indigo-50/50 border-indigo-200" },
+                        { name: "Uitdaging", icon: "✨", cls: "bg-purple-50/50 border-purple-200" }
+                    ];
+
+                    cats.forEach(cat => {
+                        const box = document.createElement("div");
+                        box.className = `p-2.5 rounded-xl border ${cat.cls} flex flex-col gap-2`;
+
+                        const head = document.createElement("div");
+                        head.className = "text-xs font-extrabold text-slate-800 flex items-center gap-1.5";
+                        head.innerHTML = `<span>${cat.icon}</span><span>${cat.name}</span>`;
+                        box.appendChild(head);
+
+                        const row = document.createElement("div");
+                        row.className = "flex flex-wrap gap-1.5";
+
+                        EXAMPLES.forEach(ex => {
+                            if (ex.category !== cat.name) return;
+                            const btn = document.createElement("button");
+                            btn.type = "button";
+                            btn.className = "ex-btn math-font" + (activeAnimProblem === ex ? " selected" : "");
+                            btn.innerHTML = `<span>${ex.fHtml}</span>`;
+                            btn.addEventListener("click", () => {
+                                loadProblemIntoAnimation(ex, 0, false);
+                                renderExampleCategories();
+                            });
+                            row.appendChild(btn);
+                        });
+
+                        box.appendChild(row);
+                        container.appendChild(box);
+                    });
+                }
+
+                presetBtns.forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        questionCountInput.value = btn.dataset.preset;
+                        presetBtns.forEach(b => {
+                            b.classList.remove("bg-blue-100", "text-blue-800", "font-semibold");
+                            b.classList.add("bg-slate-100", "text-slate-700");
+                        });
+                        btn.classList.remove("bg-slate-100", "text-slate-700");
+                        btn.classList.add("bg-blue-100", "text-blue-800", "font-semibold");
+                    });
+                });
+
+                document.querySelectorAll(".quick-insert").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        formulaInput.focus();
+                        formulaInput.executeCommand(["insert", btn.dataset.insert]);
+                    });
+                });
+
+                document.querySelectorAll(".explore-quick").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        exploreFormulaInput.focus();
+                        exploreFormulaInput.executeCommand(["insert", btn.dataset.exploreInsert]);
+                    });
+                });
+
+                startBtn.addEventListener("click", () => {
+                    let count = parseInt(questionCountInput.value, 10);
+                    if (isNaN(count) || count < 1) count = 1;
+                    if (count > 50) count = 50;
+                    questionCountInput.value = count;
+
+                    const diff = difficultySelect.value;
+                    questions = [];
+                    for (let i = 0; i < count; i++) {
+                        const prob = generatePracticeProblem(diff);
+                        questions.push({
+                            index: i,
+                            problem: prob,
+                            steps: [],
+                            currentInput: "",
+                            solved: false,
+                            lastFeedback: null
+                        });
+                    }
+                    currentIndex = 0;
+                    switchToScreen("practice");
+                });
+
+                modePracticeBtn.addEventListener("click", () => {
+                    if (questions.length === 0) {
+                        const prob = generatePracticeProblem("mixed");
+                        questions = [{
+                            index: 0,
+                            problem: prob,
+                            steps: [],
+                            currentInput: "",
+                            solved: false,
+                            lastFeedback: null
+                        }];
+                        currentIndex = 0;
+                    }
+                    switchToScreen("practice");
+                });
+
+                const openExplore = () => switchToScreen("explore");
+                modeExploreBtn.addEventListener("click", openExplore);
+                setupOpenExploreBtn.addEventListener("click", openExplore);
+                btnBackToPractice.addEventListener("click", () => {
+                    if (questions.length === 0) startBtn.click();
+                    else switchToScreen("practice");
+                });
+
+                resetBtn.addEventListener("click", () => switchToScreen("setup"));
+                restartNewBtn.addEventListener("click", () => switchToScreen("setup"));
+
+                btnExploreApply.addEventListener("click", () => {
+                    const customProb = parseCustomEFunction(exploreFormulaInput.value || "");
+                    if (!customProb) {
+                        exploreError.textContent = "Voer een functie in van de vorm (veelterm) · e^(veelterm in x), bijv. x · e^(2x), 5e^(x² + 1) of (x + 1) · e^(−x).";
+                        exploreError.classList.remove("hidden");
+                        Sound.error();
+                        return;
+                    }
+                    exploreError.classList.add("hidden");
+                    loadProblemIntoAnimation(customProb, 0, false);
+                    renderExampleCategories();
+                });
+
+                btnRandomExplore.addEventListener("click", () => {
+                    exploreError.classList.add("hidden");
+                    const rnd = generatePracticeProblem("mixed");
+                    loadProblemIntoAnimation(rnd, 0, false);
+                    renderExampleCategories();
+                });
+
+                formulaInput.addEventListener("input", () => {
+                    if (questions[currentIndex]) {
+                        questions[currentIndex].currentInput = formulaInput.value;
+                    }
+                });
+
+                formulaInput.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        evaluateStudentStep();
+                    }
+                }, true);
+
+                checkStepBtn.addEventListener("click", evaluateStudentStep);
+
+                clearInputBtn.addEventListener("click", () => {
+                    formulaInput.value = "";
+                    if (questions[currentIndex]) questions[currentIndex].currentInput = "";
+                    formulaInput.focus();
+                });
+
+                prevBtn.addEventListener("click", () => {
+                    if (currentIndex > 0) {
+                        currentIndex--;
+                        renderCurrentQuestion();
+                    }
+                });
+
+                nextBtn.addEventListener("click", () => {
+                    if (currentIndex < questions.length - 1) {
+                        currentIndex++;
+                        renderCurrentQuestion();
+                    } else {
+                        showSummary();
+                    }
+                });
+
+                backToQuestionsBtn.addEventListener("click", () => switchToScreen("practice"));
+
+                for (let i = 0; i < 4; i++) {
+                    document.getElementById(`step-tab-${i}`).addEventListener("click", () => goToAnimStep(i));
+                }
+                document.getElementById("btn-prev").addEventListener("click", () => goToAnimStep(animStep - 1));
+                document.getElementById("btn-next").addEventListener("click", () => goToAnimStep(animStep + 1));
+                document.getElementById("btn-replay").addEventListener("click", () => {
+                    stopAutoPlay();
+                    Sound.step();
+                    renderAnimStep(false);
+                });
+                document.getElementById("btn-autoplay").addEventListener("click", toggleAutoPlay);
+
+                document.getElementById("btn-sync-step").addEventListener("click", () => {
+                    const q = questions[currentIndex];
+                    if (!q) return;
+                    const mappedStep = q.solved ? 3 : Math.min(2, q.steps.length);
+                    loadProblemIntoAnimation(q.problem, mappedStep, false);
+                    showToast(`Animatie gesynchroniseerd met stap ${mappedStep + 1}.`);
+                });
+
+                const speedCfg = [
+                    { id: "speed-slow", mult: 1.65 },
+                    { id: "speed-norm", mult: 1.0 },
+                    { id: "speed-fast", mult: 0.65 }
+                ];
+                speedCfg.forEach(cfg => {
+                    const btn = document.getElementById(cfg.id);
+                    btn.addEventListener("click", () => {
+                        speedMult = cfg.mult;
+                        document.documentElement.style.setProperty("--speed-mult", String(cfg.mult));
+                        speedCfg.forEach(b => {
+                            document.getElementById(b.id).className = "px-2 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all";
+                        });
+                        btn.className = "px-2 py-1 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-sm transition-all";
+                    });
+                });
+
+                const btnSound = document.getElementById("btn-sound");
+                btnSound.addEventListener("click", () => {
+                    Sound.enabled = !Sound.enabled;
+                    document.getElementById("sound-icon").textContent = Sound.enabled ? "🔊" : "🔇";
+                    document.getElementById("sound-text").textContent = Sound.enabled ? "Geluid aan" : "Geluid uit";
+                    if (Sound.enabled) Sound.ping(2);
+                });
+
+                window.addEventListener("resize", () => redrawAllConnectors());
+
+                function evaluateStudentStep() {
+                    const q = questions[currentIndex];
+                    if (!q) return;
+
+                    const raw = (formulaInput.value || "").trim();
+                    if (!raw) {
+                        setFeedback("error", "Voer eerst een tussenstap of het eindantwoord voor f′(x) in via de formule-editor.");
+                        Sound.error();
+                        return;
+                    }
+
+                    const prevLatex = q.steps.length > 0
+                        ? q.steps[q.steps.length - 1].latex
+                        : q.problem.equationLatex;
+
+                    let studentAst, targetAst;
+                    try {
+                        if (normalizeFormulaLatex(raw) === normalizeFormulaLatex(prevLatex)) {
+                            setFeedback("warning", "Dit is exact dezelfde uitdrukking als de vorige stap. Zet nu een volgende stap.");
+                            return;
+                        }
+                        const rhsPart = raw.includes("=") ? raw.split("=").pop().trim() : raw;
+                        studentAst = parseFormulaAst(rhsPart);
+                        targetAst = parseFormulaAst(q.problem.derivLatex);
+                    } catch (err) {
+                        setFeedback("error", err.message || "Controleer of de formule goed is ingevoerd.");
+                        Sound.error();
+                        return;
+                    }
+
+                    if (!areExpressionsEquivalent(targetAst, studentAst)) {
+                        let msg = q.problem.isChain
+                            ? "Helaas, dit is niet gelijk aan f′(x). Controleer de kettingregel: vermenigvuldig de e-macht met de afgeleide van de exponent."
+                            : "Helaas, dit is niet gelijk aan f′(x). Controleer de productregel u′ · v + u · v′" + (q.problem.needsChain ? " en vergeet de kettingregel bij v′ niet." : ".");
+                        for (const w of q.problem.wrongs) {
+                            try {
+                                const wAst = parseFormulaAst(w.latex);
+                                if (!areExpressionsEquivalent(targetAst, wAst) && areExpressionsEquivalent(wAst, studentAst)) {
+                                    msg = w.msg;
+                                    break;
+                                }
+                            } catch (e) {}
+                        }
+                        setFeedback("error", msg);
+                        Sound.error();
+                        return;
+                    }
+
+                    const isFinal = isSingleSimplifiedResult(raw, q.problem);
+                    if (isFinal) {
+                        q.steps.push({
+                            latex: raw,
+                            isSolution: true,
+                            note: "Juist vereenvoudigd!"
+                        });
+                        q.solved = true;
+                        q.currentInput = "";
+                        Sound.success();
+                        setFeedback("solved", "Uitstekend! Dit is de vereenvoudigde afgeleide.");
+                        loadProblemIntoAnimation(q.problem, 3, false);
+                        renderCurrentQuestion();
+                    } else {
+                        q.steps.push({
+                            latex: raw,
+                            isSolution: false,
+                            note: "Goede tussenstap!"
+                        });
+                        q.currentInput = "";
+                        Sound.ping(2);
+                        setFeedback("step", q.problem.isChain
+                            ? "Goede tussenstap! Vereenvoudig nu tot één getal of veelterm maal de e-macht."
+                            : "Goede tussenstap! Haal nu de e-macht buiten haakjes en tel gelijksoortige termen op.");
+                        const nextAnimStep = Math.min(2, q.steps.length);
+                        loadProblemIntoAnimation(q.problem, nextAnimStep, false);
+                        renderCurrentQuestion();
+                    }
+                }
+
+                function setFeedback(type, message) {
+                    const q = questions[currentIndex];
+                    if (q) q.lastFeedback = { type, message };
+                    renderFeedbackBox(q ? q.lastFeedback : null);
+                }
+
+                function renderFeedbackBox(fb) {
+                    if (!fb) {
+                        feedbackBox.classList.add("hidden");
+                        return;
+                    }
+                    feedbackBox.classList.remove(
+                        "hidden",
+                        "bg-emerald-50", "border-emerald-400", "text-emerald-900",
+                        "bg-green-50", "border-green-300", "text-green-900",
+                        "bg-amber-50", "border-amber-300", "text-amber-900",
+                        "bg-blue-50", "border-blue-300", "text-blue-900",
+                        "bg-red-50", "border-red-300", "text-red-900"
+                    );
+
+                    if (fb.type === "solved") {
+                        feedbackBox.classList.add("bg-emerald-50", "border-emerald-400", "text-emerald-900");
+                        feedbackBox.innerHTML = `<span class="font-extrabold">★ ${fb.message}</span>`;
+                    } else if (fb.type === "step") {
+                        feedbackBox.classList.add("bg-green-50", "border-green-300", "text-green-900");
+                        feedbackBox.innerHTML = `<span class="font-bold">✓ ${fb.message}</span>`;
+                    } else if (fb.type === "warning") {
+                        feedbackBox.classList.add("bg-amber-50", "border-amber-300", "text-amber-900");
+                        feedbackBox.innerHTML = `<span class="font-bold">! ${fb.message}</span>`;
+                    } else if (fb.type === "info") {
+                        feedbackBox.classList.add("bg-blue-50", "border-blue-300", "text-blue-900");
+                        feedbackBox.textContent = fb.message;
+                    } else {
+                        feedbackBox.classList.add("bg-red-50", "border-red-300", "text-red-900");
+                        feedbackBox.innerHTML = `<span class="font-bold">✕ ${fb.message}</span>`;
+                    }
+                }
+
+                function renderCurrentQuestion() {
+                    const q = questions[currentIndex];
+                    if (!q) return;
+
+                    const total = questions.length;
+                    const solvedCount = questions.filter(item => item.solved).length;
+
+                    questionCounter.textContent = `Vraag ${currentIndex + 1} / ${total}`;
+                    solvedCounter.textContent = `${solvedCount}/${total} opgelost`;
+                    levelBadge.textContent = q.problem.category;
+                    nextStepLabel.textContent = `Stap ${q.steps.length + 1}`;
+
+                    if (q.solved) questionStatusBadge.classList.remove("hidden");
+                    else questionStatusBadge.classList.add("hidden");
+
+                    currentEquationDisplay.value = q.problem.equationLatex;
+
+                    if (activeAnimProblem !== q.problem) {
+                        const syncStep = q.solved ? 3 : Math.min(2, q.steps.length);
+                        loadProblemIntoAnimation(q.problem, syncStep, true);
+                    }
+
+                    questionNavPills.innerHTML = "";
+                    questions.forEach((item, idx) => {
+                        const pill = document.createElement("button");
+                        pill.type = "button";
+                        pill.textContent = item.solved ? `${idx + 1}✓` : `${idx + 1}`;
+                        pill.title = `Ga naar vraag ${idx + 1}`;
+
+                        let classes = "px-2 py-0.5 rounded text-xs font-bold border transition-all ";
+                        if (idx === currentIndex) {
+                            classes += item.solved
+                                ? "bg-green-600 text-white border-green-600 ring-2 ring-blue-300"
+                                : "bg-blue-600 text-white border-blue-600 ring-2 ring-blue-200";
+                        } else if (item.solved) {
+                            classes += "bg-green-50 text-green-800 border-green-300 hover:bg-green-100";
+                        } else if (item.steps.length > 0) {
+                            classes += "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100";
+                        } else {
+                            classes += "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100";
+                        }
+
+                        pill.className = classes;
+                        pill.addEventListener("click", () => {
+                            currentIndex = idx;
+                            renderCurrentQuestion();
+                        });
+                        questionNavPills.appendChild(pill);
+                    });
+
+                    stepsContainer.innerHTML = "";
+                    q.steps.forEach((step, idx) => {
+                        const isLast = idx === q.steps.length - 1;
+                        const row = document.createElement("div");
+                        row.className = step.isSolution
+                            ? "px-4 py-1.5 bg-emerald-50/80 flex items-center justify-between gap-2"
+                            : "px-4 py-1.5 bg-white hover:bg-slate-50/70 flex items-center justify-between gap-2";
+
+                        const leftSide = document.createElement("div");
+                        leftSide.className = "flex items-center gap-3 min-w-0";
+
+                        const lbl = document.createElement("span");
+                        lbl.className = "w-16 shrink-0 text-xs font-bold text-slate-400 uppercase";
+                        lbl.textContent = `Stap ${idx + 1}`;
+
+                        const mathEl = document.createElement("math-field");
+                        mathEl.setAttribute("read-only", "");
+                        mathEl.className = "math-display font-semibold text-slate-900";
+                        mathEl.value = step.latex;
+
+                        leftSide.appendChild(lbl);
+                        leftSide.appendChild(mathEl);
+
+                        const rightSide = document.createElement("div");
+                        rightSide.className = "flex items-center gap-2 shrink-0";
+
+                        const badge = document.createElement("span");
+                        badge.className = step.isSolution
+                            ? "px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-600 text-white"
+                            : "px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800";
+                        badge.textContent = step.isSolution ? `★ ${step.note}` : `✓ ${step.note}`;
+                        rightSide.appendChild(badge);
+
+                        if (isLast) {
+                            const undoBtn = document.createElement("button");
+                            undoBtn.type = "button";
+                            undoBtn.title = "Laatste stap verwijderen";
+                            undoBtn.className = "text-xs text-slate-400 hover:text-red-600 px-1.5 py-0.5 rounded hover:bg-slate-100 transition-colors";
+                            undoBtn.textContent = "↩";
+                            undoBtn.addEventListener("click", () => {
+                                q.steps.pop();
+                                q.solved = q.steps.some(s => s.isSolution);
+                                q.lastFeedback = { type: "info", message: "Laatste stap verwijderd." };
+                                loadProblemIntoAnimation(q.problem, Math.min(2, q.steps.length), true);
+                                renderCurrentQuestion();
+                            });
+                            rightSide.appendChild(undoBtn);
+                        }
+
+                        row.appendChild(leftSide);
+                        row.appendChild(rightSide);
+                        stepsContainer.appendChild(row);
+                    });
+
+                    stepsContainer.scrollTop = stepsContainer.scrollHeight;
+                    formulaInput.value = q.currentInput || "";
+                    renderFeedbackBox(q.lastFeedback);
+
+                    prevBtn.disabled = currentIndex === 0;
+                    nextBtn.textContent = currentIndex === total - 1 ? "Eindoverzicht →" : "Volgende vraag →";
+
+                    if (!q.solved && activeScreenMode === "practice") {
+                        formulaInput.focus();
+                    }
+                }
+
+                function showSummary() {
+                    switchToScreen("summary");
+                    const total = questions.length;
+                    const solvedCount = questions.filter(q => q.solved).length;
+                    summaryScoreText.textContent = `Je hebt ${solvedCount} van de ${total} opgaven opgelost.`;
+
+                    summaryList.innerHTML = "";
+                    questions.forEach((q, idx) => {
+                        const row = document.createElement("div");
+                        row.className = "px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 bg-white hover:bg-slate-50";
+
+                        const left = document.createElement("div");
+                        left.className = "flex items-center gap-3";
+
+                        const num = document.createElement("span");
+                        num.className = "font-bold text-slate-500 text-sm";
+                        num.textContent = `Vraag ${idx + 1}:`;
+
+                        const eq = document.createElement("math-field");
+                        eq.setAttribute("read-only", "");
+                        eq.className = "math-display font-semibold text-slate-900";
+                        eq.value = q.problem.equationLatex;
+
+                        left.appendChild(num);
+                        left.appendChild(eq);
+
+                        const right = document.createElement("div");
+                        right.className = "flex items-center gap-3";
+
+                        const status = document.createElement("span");
+                        if (q.solved) {
+                            status.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800";
+                            status.textContent = `✓ Opgelost (${q.steps.length} ${q.steps.length === 1 ? "stap" : "stappen"})`;
+                        } else {
+                            status.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800";
+                            status.textContent = "Nog niet opgelost";
+                        }
+
+                        const viewBtn = document.createElement("button");
+                        viewBtn.type = "button";
+                        viewBtn.className = "text-xs font-semibold text-blue-600 hover:underline";
+                        viewBtn.textContent = "Bekijk";
+                        viewBtn.addEventListener("click", () => {
+                            currentIndex = idx;
+                            switchToScreen("practice");
+                        });
+
+                        right.appendChild(status);
+                        right.appendChild(viewBtn);
+
+                        row.appendChild(left);
+                        row.appendChild(right);
+                        summaryList.appendChild(row);
+                    });
+                }
+
+                // Initialiseer met het instelscherm
+                loadProblemIntoAnimation(EXAMPLES[0], 0, true);
+                switchToScreen("setup");
+            });
+        })();
+    </script>
+</body>
+</html>
