@@ -1302,8 +1302,17 @@
 
                 const fLatexBody = isChain ? `${frontLatex(p, false)}${eLatex(g)}` : `${frontLatex(p, true)}${eLatex(g)}`;
                 const fHtmlBody = isChain ? `${frontHtml(p, false)}${eHtml(g)}` : `${frontHtml(p, true)}${eHtml(g)}`;
-                const simplifiedLatex = `${frontLatex(q, polyTermCount(q) === 1 && !polyIsConst(q))}${eLatex(g)}`;
-                const simplifiedHtml = `${frontHtml(q, polyTermCount(q) === 1 && !polyIsConst(q))}${eHtml(g)}`;
+                const eFirst = !isChain && polyTermCount(q) > 1;
+                const simplifiedLatex = eFirst
+                    ? `${eLatex(g)} \\cdot (${polyLatex(q)})`
+                    : `${frontLatex(q, polyTermCount(q) === 1 && !polyIsConst(q))}${eLatex(g)}`;
+                const simplifiedHtml = eFirst
+                    ? `${eHtml(g)} · (${polyHtml(q)})`
+                    : `${frontHtml(q, polyTermCount(q) === 1 && !polyIsConst(q))}${eHtml(g)}`;
+                // Wat tussen de haakjes overblijft na buiten haakjes halen (nog niet vereenvoudigd)
+                const innerHtml = isChain ? "" : joinSumHtml(polyHtml(dp), mulHtml(polyIsConst(dg, 1) ? [p] : [p, dg]));
+                const factoredHtml = isChain ? "" : `${eHtml(g)} · (${innerHtml})`;
+                const needsTidy = !isChain && factoredHtml !== simplifiedHtml;
 
                 // Tussenvorm (letterlijk de regel ingevuld)
                 let middleLatex, middleHtml;
@@ -1410,14 +1419,16 @@
                             body: `u = ${pHtml} geeft u′ = ${dpHtml}. ` +
                                 (needsChain
                                     ? `v = ${eHtml(g)} geeft met de kettingregel v′ = ${vPrimeHtml}.`
-                                    : `v = e<sup class="math-sup">x</sup> geeft v′ = e<sup class="math-sup">x</sup>.`),
+                                    : `v = e<sup class="math-sup">x</sup> geeft v′ = e<sup class="math-sup">x</sup>.`) +
+                                ` Vul de productregel in: f′(x) = u′ · v + u · v′ = ${middleHtml}.`,
                             rule: needsChain
-                                ? "Vergeet niet bij v′ te vermenigvuldigen met de afgeleide van de exponent!"
-                                : "De afgeleide van eˣ is eˣ zelf."
+                                ? "Productregel: f′ = u′ · v + u · v′. Vergeet niet bij v′ te vermenigvuldigen met de afgeleide van de exponent!"
+                                : "Productregel: f′ = u′ · v + u · v′. De afgeleide van eˣ is eˣ zelf."
                         },
                         {
                             title: "Stap 4: Samenvoegen",
-                            body: `Vul in: f′(x) = u′ · v + u · v′ = ${middleHtml}. Haal ${eHtml(g)} buiten haakjes: f′(x) = <strong>${simplifiedHtml}</strong>.`,
+                            body: `Beide termen bevatten de factor ${eHtml(g)}. Haal ${eHtml(g)} buiten haakjes: f′(x) = ${factoredHtml}` +
+                                (needsTidy ? `. Vereenvoudig binnen de haakjes: f′(x) = <strong>${simplifiedHtml}</strong>.` : "."),
                             rule: "Breng de e-macht buiten haakjes en tel gelijksoortige termen binnen de haakjes op."
                         }
                     ];
@@ -1428,9 +1439,11 @@
                         [`u = ${pHtml} ⇒ <strong style="color: var(--emerald-dark);">u′ = ${dpHtml}</strong>`,
                          needsChain
                             ? `v = ${eHtml(g)} ⇒ <strong style="color: var(--amber-dark);">v′ = ${vPrimeHtml}</strong> (kettingregel: · ${polyTermCount(dg) > 1 ? "(" + dgHtml + ")" : dgHtml})`
-                            : `v = ${eHtml(g)} ⇒ <strong style="color: var(--amber-dark);">v′ = ${eHtml(g)}</strong>`],
-                        [`f′(x) = u′ · v + u · v′ = ${middleHtml}`,
-                         `<strong style="color: var(--emerald-dark);">f′(x) = ${simplifiedHtml}</strong> (${eHtml(g)} buiten haakjes)`]
+                            : `v = ${eHtml(g)} ⇒ <strong style="color: var(--amber-dark);">v′ = ${eHtml(g)}</strong>`,
+                         `<strong>f′(x) = u′ · v + u · v′ = ${middleHtml}</strong>`],
+                        [`f′(x) = ${middleHtml}`,
+                         `f′(x) = ${factoredHtml} (${eHtml(g)} buiten haakjes)`]
+                            .concat(needsTidy ? [`<strong style="color: var(--emerald-dark);">f′(x) = ${simplifiedHtml}</strong>`] : [])
                     ];
                 }
 
@@ -1447,6 +1460,7 @@
                     middleLatex,
                     simplifiedLatex,
                     simplifiedHtml,
+                    needsTidy,
                     wrongs,
                     banners,
                     explanations
@@ -2022,6 +2036,7 @@
                 }
 
                 elStageRow.innerHTML = "";
+                elStageRow.style.gap = "";
                 const p = activeAnimProblem;
                 const fPrefix = "f(x) =";
 
@@ -2069,14 +2084,31 @@
                             elStageRow.appendChild(buildChipBox([polyChip(p.dg, "var2")], { badge: "g′(<i>x</i>)", animCls: "anim-flip" }));
                         }, 550);
                     } else {
+                        const vPrimeItems = () => {
+                            const it = [eChip(p.g)];
+                            if (!polyIsConst(p.dg, 1)) it.push({ sep: "·" }, polyChip(p.dg, "var2"));
+                            return it;
+                        };
+                        // Eerst u′ en v′ los ...
                         elStageRow.appendChild(buildChipBox([polyChip(p.dp, "var1")], { badge: "u′", animCls: "anim-flip" }));
                         scheduleAnim(() => {
                             if (!silent) Sound.ping(2);
-                            elStageRow.appendChild(opBadge("en", true));
-                            const vItems = [eChip(p.g)];
-                            if (!polyIsConst(p.dg, 1)) vItems.push({ sep: "·" }, polyChip(p.dg, "var2"));
-                            elStageRow.appendChild(buildChipBox(vItems, { badge: "v′", animCls: "anim-flip" }));
+                            elStageRow.appendChild(buildChipBox(vPrimeItems(), { badge: "v′", animCls: "anim-flip" }));
                         }, 550);
+                        // ... daarna de complete productregel ingevuld: u′ · v + u · v′
+                        scheduleAnim(() => {
+                            if (!silent) Sound.ping(3);
+                            elStageRow.innerHTML = "";
+                            elStageRow.style.gap = "4px";   // compact, zodat de hele regel op één rij past
+                            elStageRow.appendChild(buildChipBox([polyChip(p.dp, "var1")], { badge: "u′", animCls: "anim-enter" }));
+                            elStageRow.appendChild(createDot("·"));
+                            elStageRow.appendChild(buildChipBox([eChip(p.g)], { badge: "v", animCls: "anim-enter" }));
+                            elStageRow.appendChild(createDot("+"));
+                            elStageRow.appendChild(buildChipBox([polyChip(p.p, "var1")], { badge: "u", animCls: "anim-enter" }));
+                            elStageRow.appendChild(createDot("·"));
+                            elStageRow.appendChild(buildChipBox(vPrimeItems(), { badge: "v′", animCls: "anim-enter" }));
+                            elStageRow.querySelectorAll(".fraction-row").forEach(r => { r.style.flexWrap = "nowrap"; });
+                        }, 1500);
                     }
                 }
 
@@ -2106,11 +2138,15 @@
                         }, 450);
                     }
 
-                    scheduleAnim(() => {
+                    const showFinal = () => {
                         if (!silent) Sound.success();
                         clearSvgLines();
                         arcActive = false;
                         elStageRow.innerHTML = "";
+                        if (!p.isChain && polyTermCount(p.q) > 1) {
+                            elStageRow.appendChild(buildChipBox([eChip(p.g), { sep: "·" }, polyChip(p.q, "var1")], { prefix, animCls: "anim-enter" }));
+                            return;
+                        }
                         const finalItems = [];
                         if (!polyIsConst(p.q, 1)) {
                             finalItems.push(polyIsConst(p.q, -1)
@@ -2120,7 +2156,27 @@
                         }
                         finalItems.push(eChip(p.g));
                         elStageRow.appendChild(buildChipBox(finalItems, { prefix, animCls: "anim-enter" }));
-                    }, hasMerge ? 1450 : 200);
+                    };
+
+                    if (p.isChain) {
+                        scheduleAnim(showFinal, hasMerge ? 1450 : 200);
+                    } else {
+                        // e-macht buiten haakjes: e^g · (u′ + u · g′)
+                        scheduleAnim(() => {
+                            if (!silent) Sound.cancel();
+                            clearSvgLines();
+                            arcActive = false;
+                            elStageRow.innerHTML = "";
+                            const pItem = polyChip(p.p, "var1");
+                            if (polyTermCount(p.p) === 1 && polyLeading(p.p) < 0) pItem.html = `(${pItem.html})`;
+                            const inner = [eChip(p.g), { sep: "·" }, { sep: "(" }, { html: polyHtml(p.dp), type: "var1" }, { sep: "+" }, pItem];
+                            if (!polyIsConst(p.dg, 1)) inner.push({ sep: "·" }, polyChip(p.dg, "var2"));
+                            inner.push({ sep: ")" });
+                            elStageRow.appendChild(buildChipBox(inner, { prefix, animCls: "anim-enter" }));
+                        }, 1450);
+                        if (p.needsTidy) scheduleAnim(showFinal, 2650);
+                        else scheduleAnim(() => { if (!silent) Sound.success(); }, 1500);
+                    }
                 }
             }
 
@@ -2152,7 +2208,7 @@
                 const fillEl = document.getElementById("autoplay-fill");
 
                 const scheduleNext = () => {
-                    const extra = animStep === 2 ? 800 : 300;
+                    const extra = animStep === 2 ? 1300 : animStep === 3 ? 1500 : 300;
                     const totalMs = Math.round((2400 + extra) * speedMult);
                     const start = performance.now();
 
